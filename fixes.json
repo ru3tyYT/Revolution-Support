@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "0c3901fe-10f4-4917-9416-a6b56af95501",
+    "created_at": "2025-10-06T22:13:23.007090+00:00",
+    "source": "analyze",
+    "thread_id": "1421872816243867739",
+    "thread_name": "macro doesnt collect stuff like the wealth clock",
+    "problem_summary": "Problem: Bot doesn't collect from clock or dispensers.\nSteps: User starts macro, bot resets, goes to hive, goes to field, and loops between filling bag and converting, ignoring clock/dispensers.\nFix_s",
+    "fix": "Problem: Bot doesn't collect from clock or dispensers.\nSteps: User starts macro, bot resets, goes to hive, goes to field, and loops between filling bag and converting, ignoring clock/dispensers.\nFix_snippet: \"wrong hive slot\" (suggesting the hive slot configuration in the macro is incorrect).\nConfidence: 0.7\n",
+    "confidence": null,
+    "language": null,
+    "tags": [],
+    "attachments": [],
+    "version": 1
+  },
+  {
+    "id": "415a93ae-4829-456e-a6a6-249c3edfc8db",
+    "created_at": "2025-10-06T22:28:10.648422+00:00",
+    "source": "manual",
+    "thread_id": null,
+    "thread_name": null,
+    "problem_summary": "if deskpad error shows up",
+    "fix": "install deskpad from github https://discord.com/channels/1265864190883532872/1421625591798435940",
+    "confidence": null,
+    "language": "en",
+    "tags": [],
+    "attachments": [],
+    "version": 1
+  },
+  {
+    "id": "737ad64e-2111-4938-af53-cc59323bad35",
+    "created_at": "2025-10-06T22:29:04.129234+00:00",
+    "source": "ai_button",
+    "thread_id": "1424886136383344671",
+    "thread_name": "test",
+    "problem_summary": "```json\n{\n  \"summary\": \"The user is reporting a 'deskpad error'. Without more context, it's difficult to pinpoint the exact cause. However, a common reason is a driver issue, configuration problem, or",
+    "fix": "```json\n{\n  \"summary\": \"The user is reporting a 'deskpad error'. Without more context, it's difficult to pinpoint the exact cause. However, a common reason is a driver issue, configuration problem, or hardware fault related to the deskpad device (likely a drawing tablet or similar input device).\",\n  \"confidence\": 0.6,\n  \"fixes\": [\n    \"Identify the Deskpad Device: Determine the exact make and model of the deskpad device. This information is crucial for finding the correct drivers and support resources.\",\n    \"Check Device Connection: Ensure the deskpad is properly connected to the computer (USB, Bluetooth, etc.). Try a different port or cable if possible.\",\n    \"Restart the Computer: A simple restart can often resolve temporary glitches.\",\n    \"Update Drivers: Outdated or corrupted drivers are a common cause of device errors. Go to the device manufacturer's website and download the latest drivers for your operating system.  Install the drivers and restart the computer.\",\n    \"Check Device Manager (Windows):  Open Device Manager and look for the deskpad device.  If it shows an error (yellow triangle), right-click and select 'Update Driver'.  You can also try uninstalling the device and then restarting the computer to force Windows to reinstall the driver.\",\n    \"Check System Logs: Examine system logs (Event Viewer on Windows, system logs on Linux/macOS) for error messages related to the deskpad. These logs may provide clues about the specific issue.\",\n    \"Test on Another Computer: If possible, test the deskpad on another computer to rule out a hardware problem with the deskpad itself.\",\n    \"Reinstall the Deskpad Software: If the deskpad came with specific software, try uninstalling and reinstalling it. Ensure you download the latest version from the manufacturer's website.\",\n    \"Check for Conflicting Software: Sometimes, other software can interfere with deskpad drivers. Temporarily disable or uninstall recently installed software to see if it resolves the issue.\",\n    \"Contact Manufacturer Support: If none of the above steps work, contact the deskpad manufacturer's support for further assistance. Provide them with details about the error, the device model, and the troubleshooting steps you've already taken.\"\n  ],\n  \"files_to_change\": null\n}\n```",
+    "confidence": null,
+    "language": "unknown",
+    "tags": [],
+    "attachments": [],
+    "version": 1
+  }
+]
