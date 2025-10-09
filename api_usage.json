@@ -1,0 +1,28 @@
+{
+  "total_requests": 15,
+  "total_input_chars": 20295,
+  "total_output_chars": 9593,
+  "total_cost": 0.00613425,
+  "daily": {
+    "2025-10-08": {
+      "requests": 13,
+      "input_chars": 18452,
+      "output_chars": 8354,
+      "cost": 0.00543925
+    },
+    "2025-10-09": {
+      "requests": 2,
+      "input_chars": 1843,
+      "output_chars": 1239,
+      "cost": 0.000695
+    }
+  },
+  "monthly": {
+    "2025-10": {
+      "requests": 15,
+      "input_chars": 20295,
+      "output_chars": 9593,
+      "cost": 0.00613425
+    }
+  }
+}
