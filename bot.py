@@ -5,11 +5,14 @@ from discord import app_commands, Embed, ButtonStyle
 from discord.ui import View, Button
 from dotenv import load_dotenv
 import asyncio
+import re
 
 from modules.ai_client import AIClient
 from modules.thread_manager import ThreadManager
 from modules import fix_store, prompts, utils
 import api_usage
+import bot_history
+import permissions
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
@@ -27,18 +30,21 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SUPPORT_ROLE_ID = os.getenv("SUPPORT_ROLE_ID")
 BACKUP_WEBHOOK_URL = os.getenv("BACKUP_WEBHOOK_URL")
 
-ALLOWED_ROLE_IDS = [
-    1324169948444102848, 1407811396426534974, 1327057500242972702,
-    1419402709043384521, 1373900702207836291, 1422106035337826315, 1405246916760961125
-]
+# Bot enabled/disabled state
+BOT_ENABLED = True
 
 if not DISCORD_TOKEN:
     raise ValueError("DISCORD_TOKEN is required in .env file")
 
-def has_allowed_role(interaction: discord.Interaction) -> bool:
-    if not hasattr(interaction.user, 'roles') or not interaction.user.roles:
-        return False
-    return any(role.id in ALLOWED_ROLE_IDS for role in interaction.user.roles)
+def strip_markdown_embeds(text: str) -> str:
+    """Remove markdown embed syntax from AI responses"""
+    # Remove code blocks with json
+    text = re.sub(r'```json\s*\n(.*?)\n```', r'\1', text, flags=re.DOTALL)
+    # Remove regular code blocks
+    text = re.sub(r'```(.*?)```', r'\1', text, flags=re.DOTALL)
+    # Remove inline code
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    return text.strip()
 
 class SupportBot(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -83,11 +89,13 @@ async def on_ready():
     logger.info(f'Bot ID: {client.user.id}')
     logger.info(f'Guilds: {len(client.guilds)}')
     logger.info('='*50)
+    bot_history.log_action("bot_start", "System", "Bot started successfully")
 
 @client.event
 async def on_thread_create(thread: discord.Thread):
     await asyncio.sleep(2)
     await client.thread_manager.handle_new_thread(thread)
+    bot_history.log_action("thread_create", "System", f"Welcome message sent in thread: {thread.name}", str(thread.id))
 
 @client.event
 async def on_interaction(interaction: discord.Interaction):
@@ -148,9 +156,10 @@ async def handle_generate_fix_button(interaction: discord.Interaction):
         )
         
         ai_response = await client.ai_client.generate_fix(prompt)
-        
-        # Track API usage
         api_usage.track_request(prompt, ai_response)
+        
+        # Strip markdown/embed syntax
+        ai_response = strip_markdown_embeds(ai_response)
         
         confidence = utils.confidence_heuristic(ai_response)
         
@@ -167,6 +176,7 @@ async def handle_generate_fix_button(interaction: discord.Interaction):
         embed.set_footer(text=f"Confidence: {confidence:.0%}")
         
         await interaction.followup.send(embed=embed)
+        bot_history.log_action("generate_fix_button", interaction.user.name, f"AI fix generated in thread: {thread_title}", str(interaction.channel_id))
     except Exception as e:
         logger.error(f"Error in generate_fix: {e}")
         try:
@@ -195,6 +205,8 @@ async def handle_solved_button(interaction: discord.Interaction):
                 await interaction.channel.edit(applied_tags=[resolved_tag], locked=True)
             else:
                 await interaction.channel.edit(locked=True)
+            
+            bot_history.log_action("mark_solved", interaction.user.name, f"Thread marked as solved: {interaction.channel.name}", str(interaction.channel_id))
     except Exception as e:
         logger.error(f"Failed to lock/tag thread: {e}")
 
@@ -207,6 +219,7 @@ async def handle_unsolved_button(interaction: discord.Interaction):
     if SUPPORT_ROLE_ID:
         try:
             await interaction.channel.send(f"<@&{SUPPORT_ROLE_ID}> This thread needs attention.")
+            bot_history.log_action("mark_unsolved", interaction.user.name, f"Thread marked as unsolved: {interaction.channel.name}", str(interaction.channel_id))
         except:
             pass
 
@@ -215,13 +228,19 @@ async def handle_unsolved_button(interaction: discord.Interaction):
 @client.tree.command(name="fix", description="Manually add a fix to the knowledge base")
 @app_commands.describe(problem="Brief description of the problem", solution="The solution or fix", confidence="Confidence level (0.0 to 1.0)")
 async def fix_command(interaction: discord.Interaction, problem: str, solution: str, confidence: float = 0.8):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=True)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
@@ -239,19 +258,26 @@ async def fix_command(interaction: discord.Interaction, problem: str, solution: 
         embed.add_field(name="Confidence", value=f"{confidence:.0%}", inline=True)
         
         await interaction.followup.send(embed=embed, ephemeral=True)
+        bot_history.log_action("manual_fix", interaction.user.name, f"Added fix: {problem[:50]}", interaction.channel.name if interaction.channel else "DM")
     except Exception as e:
         logger.error(f"Error in fix_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
 
 @client.tree.command(name="analyze", description="Analyze the current thread and generate a fix")
 async def analyze_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=False)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.can_use_limited_commands(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     if not interaction.channel:
@@ -272,17 +298,16 @@ async def analyze_command(interaction: discord.Interaction):
         thread_text = "\n".join(messages)
         prompt = prompts.build_summary_prompt(thread_text[:4000])
         ai_response = await client.ai_client.generate_fix(prompt)
-        
-        # Track API usage
         api_usage.track_request(prompt, ai_response)
+        
+        # Strip markdown/embed syntax
+        ai_response = strip_markdown_embeds(ai_response)
         
         confidence = utils.confidence_heuristic(ai_response)
         
-        # Create embed with analysis
         embed = Embed(title="📊 Thread Analysis", description=ai_response[:4000], color=0x3498db)
         embed.set_footer(text=f"Confidence: {confidence:.0%}")
         
-        # Create button to save to fixes
         view = View(timeout=300)
         save_button = Button(style=ButtonStyle.success, label="💾 Save to Fixes Database", custom_id=f"save_analysis")
         
@@ -305,6 +330,7 @@ async def analyze_command(interaction: discord.Interaction):
                 save_button.disabled = True
                 save_button.label = "✅ Saved"
                 await button_interaction.message.edit(view=view)
+                bot_history.log_action("save_analysis", button_interaction.user.name, f"Saved analysis for: {interaction.channel.name}", str(interaction.channel_id))
             except Exception as e:
                 logger.error(f"Error saving analysis: {e}")
                 await button_interaction.followup.send(f"⚠️ Error saving: {str(e)}", ephemeral=True)
@@ -313,6 +339,7 @@ async def analyze_command(interaction: discord.Interaction):
         view.add_item(save_button)
         
         await interaction.followup.send(embed=embed, view=view)
+        bot_history.log_action("analyze", interaction.user.name, f"Analyzed thread: {interaction.channel.name}", str(interaction.channel_id))
     except Exception as e:
         logger.error(f"Error in analyze_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
@@ -320,13 +347,19 @@ async def analyze_command(interaction: discord.Interaction):
 @client.tree.command(name="search", description="Search the fix database")
 @app_commands.describe(query="Search term or problem description")
 async def search_command(interaction: discord.Interaction, query: str):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=True)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
@@ -345,6 +378,7 @@ async def search_command(interaction: discord.Interaction, query: str):
             embed.add_field(name=f"{i}. {problem}", value=f"{solution}...\n*Confidence: {confidence:.0%}*", inline=False)
         
         await interaction.followup.send(embed=embed, ephemeral=True)
+        bot_history.log_action("search", interaction.user.name, f"Searched for: {query}", interaction.channel.name if interaction.channel else "DM")
     except Exception as e:
         logger.error(f"Error in search_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
@@ -352,13 +386,19 @@ async def search_command(interaction: discord.Interaction, query: str):
 @client.tree.command(name="say", description="Send a message as the bot")
 @app_commands.describe(message="The message to send", ai_enhance="Use AI to rewrite and enhance the message")
 async def say_command(interaction: discord.Interaction, message: str, ai_enhance: bool = False):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=True)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
@@ -366,25 +406,32 @@ async def say_command(interaction: discord.Interaction, message: str, ai_enhance
         if ai_enhance:
             prompt = f"Rewrite this message to be more clear, professional, and well-formatted:\n\n{message}"
             final_message = await client.ai_client.generate_fix(prompt)
-            # Track API usage
             api_usage.track_request(prompt, final_message)
+            final_message = strip_markdown_embeds(final_message)
         
         embed = Embed(description=final_message, color=0x5865F2)
         await interaction.channel.send(embed=embed)
         await interaction.followup.send("✅ Message sent!", ephemeral=True)
+        bot_history.log_action("say", interaction.user.name, f"Sent message: {message[:50]}...", interaction.channel.name if interaction.channel else "DM")
     except Exception as e:
         logger.error(f"Error in say_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
 
 @client.tree.command(name="backup", description="Backup all fixes to a webhook")
 async def backup_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=True)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     if not BACKUP_WEBHOOK_URL:
@@ -407,15 +454,16 @@ async def backup_command(interaction: discord.Interaction):
                 await webhook.send(f"```json\n{data}\n```")
         
         await interaction.followup.send(f"✅ Backed up {len(fixes)} fixes!", ephemeral=True)
+        bot_history.log_action("backup", interaction.user.name, f"Backed up {len(fixes)} fixes", "Webhook")
     except Exception as e:
         logger.error(f"Error in backup_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
 
 @client.tree.command(name="reload", description="Reload bot commands (Admin only)")
 async def reload_command(interaction: discord.Interaction):
-    if not has_allowed_role(interaction) or not interaction.user.guild_permissions.administrator:
+    if not permissions.is_admin(interaction):
         try:
-            await interaction.response.send_message("⚠️ You don't have permission.", ephemeral=True)
+            await interaction.response.send_message("⚠️ You need admin permission to use this command.", ephemeral=True)
         except:
             pass
         return
@@ -437,6 +485,7 @@ async def reload_command(interaction: discord.Interaction):
             client.tree.clear_commands(guild=None)
             await client.tree.sync()
             await interaction.edit_original_response(content="✅ Commands reloaded!")
+        bot_history.log_action("reload", interaction.user.name, "Reloaded bot commands", "System")
     except Exception as e:
         logger.error(f"Error in reload_command: {e}")
         try:
@@ -446,17 +495,22 @@ async def reload_command(interaction: discord.Interaction):
 
 @client.tree.command(name="stats", description="Show bot statistics")
 async def stats_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=True)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
-        # Get fix stats
         fixes = fix_store.load_fixes()
         total_fixes = len(fixes)
         ai_fixes = sum(1 for f in fixes if f.get("source") in ["ai_button", "analyze_command"])
@@ -464,14 +518,12 @@ async def stats_command(interaction: discord.Interaction):
         confidences = [f.get("confidence") or 0 for f in fixes]
         avg_confidence = sum(confidences) / total_fixes if total_fixes > 0 else 0
         
-        # Get API usage stats
         today_stats = api_usage.get_today_stats()
         month_stats = api_usage.get_month_stats()
         estimated_monthly = api_usage.estimate_monthly_cost()
         
         embed = Embed(title="📊 Bot Statistics", color=0x3498db)
         
-        # Fix stats
         embed.add_field(name="Total Fixes", value=str(total_fixes), inline=True)
         embed.add_field(name="AI Generated", value=str(ai_fixes), inline=True)
         embed.add_field(name="Manual Fixes", value=str(manual_fixes), inline=True)
@@ -479,7 +531,6 @@ async def stats_command(interaction: discord.Interaction):
         embed.add_field(name="Guilds", value=str(len(client.guilds)), inline=True)
         embed.add_field(name="Uptime", value="Active", inline=True)
         
-        # API usage stats
         embed.add_field(name="\u200b", value="**💰 API Usage**", inline=False)
         embed.add_field(name="Requests Today", value=str(today_stats.get("requests", 0)), inline=True)
         embed.add_field(name="Cost Today", value=f"${today_stats.get('cost', 0):.4f}", inline=True)
@@ -493,6 +544,8 @@ async def stats_command(interaction: discord.Interaction):
 
 @client.tree.command(name="mark_for_review", description="Mark this thread for review by the original poster")
 async def mark_for_review_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
     if not isinstance(interaction.channel, discord.Thread):
         try:
             await interaction.response.send_message("⚠️ This command can only be used in threads.", ephemeral=True)
@@ -505,8 +558,12 @@ async def mark_for_review_command(interaction: discord.Interaction):
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.can_use_limited_commands(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
@@ -523,6 +580,7 @@ async def mark_for_review_command(interaction: discord.Interaction):
         
         await thread.send(f"{thread_owner.mention} Please mark this thread as solved or unsolved:", view=view)
         await interaction.followup.send("✅ Review buttons posted and thread owner pinged!", ephemeral=False)
+        bot_history.log_action("mark_for_review", interaction.user.name, f"Marked thread for review: {thread.name}", str(thread.id))
     except Exception as e:
         logger.error(f"Error in mark_for_review_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
@@ -530,29 +588,160 @@ async def mark_for_review_command(interaction: discord.Interaction):
 @client.tree.command(name="ask", description="Ask the AI a question")
 @app_commands.describe(question="Your question for the AI")
 async def ask_command(interaction: discord.Interaction, question: str):
+    global BOT_ENABLED
+    
     try:
         await interaction.response.defer(ephemeral=False)
     except:
         return
     
-    if not has_allowed_role(interaction):
-        await interaction.followup.send("⚠️ You don't have permission.", ephemeral=True)
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
         return
     
     try:
         prompt = f"Answer this question clearly and helpfully:\n\n{question}"
         ai_response = await client.ai_client.generate_fix(prompt)
-        
-        # Track API usage
         api_usage.track_request(prompt, ai_response)
+        
+        # Strip markdown/embed syntax
+        ai_response = strip_markdown_embeds(ai_response)
         
         embed = Embed(title="💬 AI Response", description=ai_response[:4000], color=0x5865F2)
         embed.set_footer(text=f"Question: {question[:100]}...")
         
         await interaction.followup.send(embed=embed, ephemeral=False)
+        bot_history.log_action("ask", interaction.user.name, f"Asked: {question[:50]}...", interaction.channel.name if interaction.channel else "DM")
     except Exception as e:
         logger.error(f"Error in ask_command: {e}")
         await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
+
+@client.tree.command(name="history", description="View bot action history")
+@app_commands.describe(limit="Number of recent actions to show (max 50)", filter_type="Filter by action type")
+@app_commands.choices(filter_type=[
+    app_commands.Choice(name="All Actions", value="all"),
+    app_commands.Choice(name="Commands", value="command"),
+    app_commands.Choice(name="Thread Actions", value="thread"),
+    app_commands.Choice(name="AI Generations", value="ai")
+])
+async def history_command(interaction: discord.Interaction, limit: int = 20, filter_type: str = "all"):
+    global BOT_ENABLED
+    
+    try:
+        await interaction.response.defer(ephemeral=True)
+    except:
+        return
+    
+    if not BOT_ENABLED and not permissions.is_admin(interaction):
+        await interaction.followup.send("⚠️ Bot is currently disabled.", ephemeral=True)
+        return
+    
+    if not permissions.has_full_access(interaction):
+        await interaction.followup.send("⚠️ You don't have permission to use this command.", ephemeral=True)
+        return
+    
+    try:
+        limit = min(max(1, limit), 50)  # Clamp between 1 and 50
+        history = bot_history.get_recent_history(limit)
+        
+        if not history:
+            await interaction.followup.send("📜 No history found.", ephemeral=True)
+            return
+        
+        # Filter if needed
+        if filter_type != "all":
+            filter_map = {
+                "command": ["manual_fix", "search", "say", "backup", "reload", "ask", "analyze", "mark_for_review"],
+                "thread": ["thread_create", "mark_solved", "mark_unsolved"],
+                "ai": ["generate_fix_button", "analyze", "ask"]
+            }
+            action_types = filter_map.get(filter_type, [])
+            history = [h for h in history if h.get("action_type") in action_types]
+        
+        embed = Embed(title="📜 Bot Action History", color=0x9b59b6)
+        embed.set_footer(text=f"Showing last {len(history)} action(s)")
+        
+        for entry in history[-limit:]:
+            timestamp = entry.get("timestamp", "Unknown")[:19]  # Remove microseconds
+            action = entry.get("action_type", "unknown")
+            user = entry.get("user", "Unknown")
+            details = entry.get("details", "No details")
+            channel = entry.get("channel", "N/A")
+            
+            # Format action name
+            action_emoji = {
+                "bot_start": "🟢",
+                "manual_fix": "✏️",
+                "analyze": "📊",
+                "search": "🔍",
+                "say": "💬",
+                "ask": "❓",
+                "mark_solved": "✅",
+                "mark_unsolved": "❌",
+                "generate_fix_button": "🤖",
+                "thread_create": "📝",
+                "mark_for_review": "👀",
+                "save_analysis": "💾",
+                "backup": "📦",
+                "reload": "🔄"
+            }
+            
+            emoji = action_emoji.get(action, "•")
+            value = f"**User:** {user}\n**Details:** {details[:100]}\n**Channel:** {channel}"
+            
+            embed.add_field(
+                name=f"{emoji} {action.replace('_', ' ').title()} - {timestamp}",
+                value=value,
+                inline=False
+            )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        bot_history.log_action("history", interaction.user.name, f"Viewed history (limit: {limit}, filter: {filter_type})", "System")
+    except Exception as e:
+        logger.error(f"Error in history_command: {e}")
+        await interaction.followup.send(f"⚠️ Error: {str(e)}", ephemeral=True)
+
+@client.tree.command(name="enable", description="Enable the bot (Admin only)")
+async def enable_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
+    if not permissions.is_admin(interaction):
+        try:
+            await interaction.response.send_message("⚠️ You need admin permission to use this command.", ephemeral=True)
+        except:
+            pass
+        return
+    
+    try:
+        await interaction.response.send_message("✅ Bot enabled! All commands are now active.", ephemeral=True)
+        BOT_ENABLED = True
+        logger.info(f"Bot enabled by {interaction.user.name}")
+        bot_history.log_action("enable", interaction.user.name, "Bot enabled", "System")
+    except:
+        pass
+
+@client.tree.command(name="disable", description="Disable the bot (Admin only)")
+async def disable_command(interaction: discord.Interaction):
+    global BOT_ENABLED
+    
+    if not permissions.is_admin(interaction):
+        try:
+            await interaction.response.send_message("⚠️ You need admin permission to use this command.", ephemeral=True)
+        except:
+            pass
+        return
+    
+    try:
+        await interaction.response.send_message("🔒 Bot disabled! Only admins can use commands now.", ephemeral=True)
+        BOT_ENABLED = False
+        logger.info(f"Bot disabled by {interaction.user.name}")
+        bot_history.log_action("disable", interaction.user.name, "Bot disabled", "System")
+    except:
+        pass
 
 # ==================== RUN BOT ====================
 
@@ -561,5 +750,7 @@ if __name__ == "__main__":
         client.run(DISCORD_TOKEN)
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
+        bot_history.log_action("bot_stop", "System", "Bot stopped by user", "System")
     except Exception as e:
         logger.exception("Fatal error running bot")
+        bot_history.log_action("bot_error", "System", f"Fatal error: {str(e)}", "System")
