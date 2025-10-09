@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2025-10-09T01:19:25.753743+00:00",
+    "action_type": "bot_start",
+    "user": "System",
+    "channel": null,
+    "details": "Bot started successfully"
+  },
+  {
+    "timestamp": "2025-10-09T01:19:35.520323+00:00",
+    "action_type": "disable",
+    "user": "mr.duckquack",
+    "channel": "System",
+    "details": "Bot disabled"
+  },
+  {
+    "timestamp": "2025-10-09T01:19:49.661815+00:00",
+    "action_type": "enable",
+    "user": "mr.duckquack",
+    "channel": "System",
+    "details": "Bot enabled"
+  },
+  {
+    "timestamp": "2025-10-09T01:19:52.326924+00:00",
+    "action_type": "say",
+    "user": "konakin",
+    "channel": "💬・general",
+    "details": "Sent message: pov 4 spicy bees 1 tadpole bee..."
+  },
+  {
+    "timestamp": "2025-10-09T01:22:18.782668+00:00",
+    "action_type": "history",
+    "user": "mr.duckquack",
+    "channel": "System",
+    "details": "Viewed history (limit: 20, filter: all)"
+  },
+  {
+    "timestamp": "2025-10-09T01:22:40.926457+00:00",
+    "action_type": "history",
+    "user": "mr.duckquack",
+    "channel": "System",
+    "details": "Viewed history (limit: 20, filter: all)"
+  }
+]
