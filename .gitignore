@@ -429,6 +429,9 @@ config/*.local.yml
 *.session
 *.session-journal
 
+# Legacy fixes database (large file, keep locally)
+fixes.json
+
 # Discord bot cache
 bot_cache/
 command_cache/
