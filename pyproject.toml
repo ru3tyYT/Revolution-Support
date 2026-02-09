@@ -1,0 +1,457 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "discord-support-bot"
+version = "1.0.0"
+description = "AI-powered Discord support bot with smart routing and cost optimization"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["discord", "bot", "support", "ai", "chatbot", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    # Discord
+    "discord.py>=2.3.0,<3.0.0",
+    "py-cord>=2.4.0; extra == 'pycord'",
+    
+    # AI Providers
+    "openai>=1.0.0,<2.0.0",
+    "anthropic>=0.20.0,<1.0.0",
+    "langchain>=0.1.0,<0.2.0",
+    "langchain-openai>=0.1.0,<0.2.0",
+    "langchain-anthropic>=0.1.0,<0.2.0",
+    
+    # Database
+    "SQLAlchemy>=2.0.0,<3.0.0",
+    "asyncpg>=0.29.0,<0.30.0",
+    "alembic>=1.13.0,<2.0.0",
+    "psycopg2-binary>=2.9.9,<3.0.0",
+    
+    # Vector Database (RAG)
+    "pgvector>=0.2.0,<0.3.0",
+    "sentence-transformers>=2.3.0,<3.0.0",
+    
+    # Cache
+    "redis>=5.0.0,<6.0.0",
+    "hiredis>=2.3.0,<3.0.0",
+    
+    # Configuration
+    "pydantic>=2.5.0,<3.0.0",
+    "pydantic-settings>=2.1.0,<3.0.0",
+    "PyYAML>=6.0.1,<7.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    
+    # HTTP & API
+    "aiohttp>=3.9.0,<4.0.0",
+    "httpx>=0.26.0,<0.28.0",
+    "tenacity>=8.2.0,<9.0.0",
+    
+    # Monitoring & Observability
+    "structlog>=23.2.0,<24.0.0",
+    "prometheus-client>=0.19.0,<0.20.0",
+    "sentry-sdk>=1.39.0,<2.0.0",
+    
+    # Utilities
+    "click>=8.1.0,<9.0.0",
+    "rich>=13.7.0,<14.0.0",
+    "typer>=0.9.0,<0.10.0",
+    "jinja2>=3.1.0,<4.0.0",
+    "aiofiles>=23.2.0,<24.0.0",
+    "python-dateutil>=2.8.0,<3.0.0",
+    "pytz>=2023.3",
+    "orjson>=3.9.0,<4.0.0",
+    
+    # Document Processing
+    "pypdf>=3.17.0,<4.0.0",
+    "python-docx>=1.1.0,<2.0.0",
+    "beautifulsoup4>=4.12.0,<5.0.0",
+    "markdown>=3.5.0,<4.0.0",
+    
+    # Security
+    "cryptography>=41.0.0,<42.0.0",
+    "bcrypt>=4.1.0,<5.0.0",
+    
+    # Async utilities
+    "aiocache>=0.12.0,<0.13.0",
+    "asyncio-throttle>=1.0.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.4.0,<8.0.0",
+    "pytest-asyncio>=0.21.0,<0.24.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+    "pytest-mock>=3.12.0,<4.0.0",
+    "pytest-xdist>=3.5.0,<4.0.0",
+    "pytest-watch>=4.2.0,<5.0.0",
+    "factory-boy>=3.3.0,<4.0.0",
+    "faker>=22.0.0,<23.0.0",
+    "responses>=0.24.0,<0.25.0",
+    "respx>=0.20.0,<0.21.0",
+    
+    # Linting & Formatting
+    "black>=23.12.0,<24.0.0",
+    "ruff>=0.1.9,<0.2.0",
+    "mypy>=1.7.0,<2.0.0",
+    "pre-commit>=3.6.0,<4.0.0",
+    
+    # Type checking
+    "types-PyYAML>=6.0.0,<7.0.0",
+    "types-python-dateutil>=2.8.0,<3.0.0",
+    "types-redis>=4.6.0,<5.0.0",
+    "types-requests>=2.31.0,<3.0.0",
+    
+    # Documentation
+    "mkdocs>=1.5.0,<2.0.0",
+    "mkdocs-material>=9.5.0,<10.0.0",
+    "mkdocstrings>=0.24.0,<0.25.0",
+    
+    # Development tools
+    "ipython>=8.19.0,<9.0.0",
+    "ipdb>=0.13.0,<0.14.0",
+    "watchdog>=3.0.0,<4.0.0",
+    "devtools>=0.12.0,<0.13.0",
+]
+
+# Additional provider support
+all-providers = [
+    "langchain-groq>=0.1.0,<0.2.0",
+    "langchain-openrouter>=0.1.0,<0.2.0",
+    "groq>=0.4.0,<0.5.0",
+    "replicate>=0.22.0,<0.23.0",
+]
+
+# Voice support
+voice = [
+    "PyNaCl>=1.5.0,<2.0.0",
+    "opuslib>=3.0.0,<4.0.0",
+]
+
+# Image generation
+images = [
+    "Pillow>=10.1.0,<11.0.0",
+    "openai[datalib]>=1.0.0,<2.0.0",
+]
+
+# Full installation with all features
+all = [
+    "discord-support-bot[dev,all-providers,voice,images]",
+]
+
+[project.scripts]
+discord-bot = "bot.cli:main"
+bot = "bot.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourorg/discord-support-bot"
+Documentation = "https://discord-support-bot.readthedocs.io"
+Repository = "https://github.com/yourorg/discord-support-bot.git"
+"Bug Tracker" = "https://github.com/yourorg/discord-support-bot/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bot"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/bot",
+    "/config",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+# ============================================
+# BLACK CONFIGURATION
+# ============================================
+[tool.black]
+line-length = 100
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | migrations
+  | __pycache__
+)/
+'''
+skip-string-normalization = false
+skip-magic-trailing-comma = false
+
+# ============================================
+# RUFF CONFIGURATION
+# ============================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    # Pyflakes
+    "F",
+    # Pycodestyle
+    "E", "W",
+    # McCabe complexity
+    "C90",
+    # isort
+    "I",
+    # Pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # flake8-comprehensions
+    "C4",
+    # flake8-eradicate
+    "ERA",
+    # Perflint
+    "PERF",
+    # Pytest-specific rules
+    "PT",
+    # Documentation
+    "D",
+    # Error handling
+    "TRY",
+    # Type checking
+    "TCH",
+]
+ignore = [
+    # Line too long (handled by black)
+    "E501",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in __init__
+    "D107",
+    # One-line docstring should fit on one line
+    "D200",
+    # Missing blank line after last section
+    "D413",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["bot"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ============================================
+# PYTEST CONFIGURATION
+# ============================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "-ra",
+    "--cov=bot",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml:coverage.xml",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow tests",
+    "ai: Tests requiring AI providers",
+    "database: Tests requiring database",
+    "redis: Tests requiring Redis",
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# ============================================
+# MYPY CONFIGURATION
+# ============================================
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+explicit_package_bases = true
+namespace_packages = true
+mypy_path = ["bot"]
+
+[[tool.mypy.overrides]]
+module = [
+    "discord.*",
+    "discord.ext.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+]
+disallow_untyped_defs = false
+
+# ============================================
+# COVERAGE CONFIGURATION
+# ============================================
+[tool.coverage.run]
+source = ["bot"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "bot/__main__.py",
+    "bot/cli.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+skip_covered = false
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# ============================================
+# HATCH ENVIRONMENTS
+# ============================================
+[tool.hatch.envs.default]
+dependencies = [
+    "discord-support-bot[dev]",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args}"
+test-cov = "pytest --cov-report=html {args}"
+lint = [
+    "ruff check bot tests",
+    "ruff format --check bot tests",
+    "black --check bot tests",
+]
+format = [
+    "ruff check --fix bot tests",
+    "ruff format bot tests",
+    "black bot tests",
+]
+typecheck = "mypy bot"
+docs = "mkdocs serve"
+build = [
+    "python -m build",
+]
+all-checks = [
+    "lint",
+    "typecheck",
+    "test",
+]
+
+[tool.hatch.envs.prod]
+dependencies = [
+    "discord-support-bot[all-providers,voice,images]",
+]
+
+[tool.hatch.envs.prod.scripts]
+start = "python -m bot"
+
+# ============================================
+# TOX CONFIGURATION
+# ============================================
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py311,py312,lint,typecheck
+
+[testenv]
+deps = 
+    pytest
+    pytest-asyncio
+    pytest-cov
+commands = pytest {posargs}
+
+[testenv:lint]
+deps = 
+    black
+    ruff
+commands = 
+    black --check bot tests
+    ruff check bot tests
+
+[testenv:typecheck]
+deps = 
+    mypy
+    types-PyYAML
+    types-redis
+commands = mypy bot
+
+[testenv:format]
+deps = 
+    black
+    ruff
+commands = 
+    black bot tests
+    ruff check --fix bot tests
+    ruff format bot tests
+"""

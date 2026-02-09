@@ -1,0 +1,187 @@
+version: "3.8"
+
+# Single Server Deployment - Simplified Docker Compose
+# Copy this file to docker-compose.yml and run: docker-compose up -d
+#
+# Required environment variables in .env file:
+#   DISCORD_TOKEN=your_token_here
+#   POSTGRES_PASSWORD=your_secure_password
+#   OPENAI_API_KEY=your_key_here
+#   SERPAPI_KEY=your_key_here
+
+services:
+  # Main Discord Bot (Single Instance - No Clustering)
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    container_name: discord-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/supportbot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CLUSTER_MODE=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import discord; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: discord-bot-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=supportbot
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d supportbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Redis Cache & Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: discord-bot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # Celery Workers for Research Tasks (2 replicas)
+  research-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    restart: unless-stopped
+    command: celery -A src.tasks worker --loglevel=info --concurrency=2
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/supportbot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    container_name: discord-bot-beat
+    restart: unless-stopped
+    command: celery -A src.tasks beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/supportbot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ============================================================
+  # OPTIONAL MONITORING SERVICES (Uncomment to enable)
+  # ============================================================
+  
+  # Flower - Celery Monitoring UI
+  # flower:
+  #   image: mher/flower:latest
+  #   container_name: discord-bot-flower
+  #   restart: unless-stopped
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis:6379/1
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/2
+  #     - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+  #   ports:
+  #     - "5555:5555"
+  #   depends_on:
+  #     - redis
+
+  # Prometheus Metrics Collection
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: discord-bot-prometheus
+  #   restart: unless-stopped
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #   volumes:
+  #     - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus_data:/prometheus
+  #   ports:
+  #     - "9090:9090"
+
+  # Grafana Dashboards
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: discord-bot-grafana
+  #   restart: unless-stopped
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - prometheus
+
+# Persistent volumes for data storage
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  # prometheus_data:
+  #   driver: local
+  # grafana_data:
+  #   driver: local
