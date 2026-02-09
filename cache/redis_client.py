@@ -21,8 +21,8 @@ from typing import (
     Union,
 )
 
-import aioredis
-from aioredis import Redis
+import redis.asyncio as aioredis
+from redis.asyncio import Redis
 
 from ..monitoring.metrics import (
     track_redis_connection,
