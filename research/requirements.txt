@@ -1,0 +1,4 @@
+celery>=5.3.0
+redis>=4.6.0
+duckduckgo-search>=3.9.0
+requests>=2.31.0

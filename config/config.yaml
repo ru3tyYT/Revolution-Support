@@ -1,0 +1,431 @@
+# Discord Support Bot Configuration
+# This file contains the main bot settings, routing rules, and feature configurations
+
+bot:
+  # Basic bot settings
+  name: "Discord Support Bot"
+  description: "AI-powered support bot with smart routing and cost optimization"
+  version: "1.0.0"
+  
+  # Command settings
+  prefix: "!"
+  case_sensitive: false
+  mention_as_prefix: true
+  
+  # Status and presence
+  status:
+    type: "watching"  # playing, listening, watching, competing
+    message: "for support requests | !help"
+    status: "online"  # online, idle, dnd, invisible
+  
+  # Activity rotation (optional)
+  activities:
+    - type: "watching"
+      message: "for support requests | !help"
+    - type: "listening"
+      message: "to your questions"
+    - type: "playing"
+      message: "with AI models"
+
+# Discord Gateway Intents
+intents:
+  guilds: true
+  members: true
+  moderation: false
+  guild_messages: true
+  guild_reactions: true
+  guild_typing: false
+  direct_messages: true
+  direct_message_reactions: true
+  direct_message_typing: false
+  message_content: true
+  guild_scheduled_events: false
+  auto_moderation: false
+  auto_moderation_configuration: false
+  auto_moderation_execution: false
+
+# AI Provider Routing Rules
+# Defines which provider/model to use based on query characteristics
+routing:
+  # Default provider when no rules match
+  default_provider: "openai"
+  default_model: "gpt-4o-mini"
+  
+  # Routing strategies
+  strategies:
+    # Strategy 1: Cost-based routing
+    - name: "cost_optimized"
+      priority: 1
+      conditions:
+        - type: "complexity"
+          operator: "lte"
+          value: 3  # Simple queries (1-10 scale)
+        - type: "user_tier"
+          operator: "eq"
+          value: "free"
+      action:
+        provider: "groq"
+        model: "llama-3.1-8b-instant"
+      
+    # Strategy 2: Speed-based routing
+    - name: "fast_response"
+      priority: 2
+      conditions:
+        - type: "latency_requirement"
+          operator: "lte"
+          value: 2000  # milliseconds
+      action:
+        provider: "groq"
+        model: "llama-3.1-8b-instant"
+    
+    # Strategy 3: Quality-based routing
+    - name: "high_quality"
+      priority: 3
+      conditions:
+        - type: "complexity"
+          operator: "gte"
+          value: 7
+        - type: "escalation"
+          operator: "eq"
+          value: true
+      action:
+        provider: "anthropic"
+        model: "claude-3-5-sonnet-20241022"
+    
+    # Strategy 4: Code-related routing
+    - name: "code_tasks"
+      priority: 4
+      conditions:
+        - type: "category"
+          operator: "in"
+          value: ["code", "programming", "development", "debugging"]
+      action:
+        provider: "openai"
+        model: "gpt-4o"
+    
+    # Strategy 5: Premium users
+    - name: "premium_tier"
+      priority: 5
+      conditions:
+        - type: "user_tier"
+          operator: "eq"
+          value: "premium"
+      action:
+        provider: "anthropic"
+        model: "claude-3-opus-20240229"
+
+# Cost Optimization Settings
+cost_optimization:
+  enabled: true
+  
+  # Budget settings
+  budget:
+    daily: 50.0
+    monthly: 1000.0
+    alert_threshold: 0.8  # Alert at 80% of budget
+  
+  # Auto-downgrade settings
+  auto_downgrade:
+    enabled: true
+    threshold: 0.9  # Downgrade at 90% of budget
+    fallback_model: "gpt-4o-mini"
+  
+  # Caching strategy
+  cache:
+    enabled: true
+    strategies:
+      - name: "exact_match"
+        ttl: 86400  # 24 hours
+        min_queries: 5  # Cache after 5 identical queries
+      
+      - name: "semantic_similarity"
+        ttl: 3600  # 1 hour
+        similarity_threshold: 0.95
+      
+      - name: "conversation_context"
+        ttl: 300  # 5 minutes
+        max_context_messages: 10
+
+# Rate Limiting Configuration
+rate_limiting:
+  enabled: true
+  
+  # Global rate limits
+  global:
+    requests: 100
+    window: 60  # seconds
+    burst: 10
+  
+  # Per-user rate limits
+  per_user:
+    default:
+      requests: 10
+      window: 60
+      burst: 3
+    
+    premium:
+      requests: 50
+      window: 60
+      burst: 10
+    
+    admin:
+      requests: 1000
+      window: 60
+      burst: 100
+  
+  # Per-guild rate limits
+  per_guild:
+    requests: 1000
+    window: 60
+    burst: 50
+  
+  # AI provider rate limits (to respect provider limits)
+  provider:
+    openai:
+      requests: 3000
+      window: 60
+    anthropic:
+      requests: 1000
+      window: 60
+    groq:
+      requests: 30000
+      window: 60
+    openrouter:
+      requests: 1000
+      window: 60
+
+# Cache Configuration
+cache:
+  # Redis cache settings
+  redis:
+    enabled: true
+    ttl:
+      short: 300      # 5 minutes
+      medium: 3600    # 1 hour
+      long: 86400     # 24 hours
+      permanent: 0    # No expiration
+  
+  # Local in-memory cache
+  local:
+    enabled: true
+    max_size: 10000  # entries
+    ttl: 300  # 5 minutes
+  
+  # Cache key patterns
+  key_patterns:
+    response: "response:{hash}"
+    user_session: "session:{user_id}"
+    guild_settings: "guild:{guild_id}:settings"
+    model_info: "model:{provider}:{model}"
+    rate_limit: "ratelimit:{type}:{id}"
+
+# Conversation Memory Settings
+memory:
+  enabled: true
+  
+  # Memory limits
+  max_messages: 50
+  max_tokens: 8000
+  ttl_days: 7
+  
+  # Memory management
+  compression:
+    enabled: true
+    threshold_messages: 20
+    summary_model: "gpt-4o-mini"
+  
+  # Context window management
+  context:
+    max_tokens: 6000
+    trim_strategy: "oldest"  # oldest, least_relevant, summary
+    reserve_tokens: 1000
+
+# Knowledge Base (RAG) Settings
+knowledge_base:
+  enabled: true
+  
+  # Vector database settings
+  vector_db:
+    provider: "pgvector"
+    dimension: 1536
+    metric: "cosine"
+    index_type: "ivfflat"
+    lists: 100
+  
+  # Embedding settings
+  embedding:
+    provider: "openai"
+    model: "text-embedding-3-small"
+    dimension: 1536
+    batch_size: 100
+  
+  # Retrieval settings
+  retrieval:
+    top_k: 5
+    similarity_threshold: 0.7
+    max_tokens: 2000
+    rerank_enabled: true
+    rerank_model: "cohere-rerank"
+  
+  # Document processing
+  document:
+    max_size_mb: 10
+    chunk_size: 1000
+    chunk_overlap: 200
+    supported_types:
+      - "pdf"
+      - "txt"
+      - "md"
+      - "docx"
+      - "html"
+
+# Ticket System Settings
+tickets:
+  enabled: true
+  
+  # Categories
+  categories:
+    support:
+      name: "Support Tickets"
+      emoji: "🎫"
+      auto_assign: true
+    bug:
+      name: "Bug Reports"
+      emoji: "🐛"
+      priority: "high"
+    feature:
+      name: "Feature Requests"
+      emoji: "✨"
+      priority: "low"
+  
+  # Auto-close settings
+  auto_close:
+    enabled: true
+    inactive_hours: 48
+    warning_hours: 24
+    max_per_user: 3
+  
+  # Transcripts
+  transcripts:
+    enabled: true
+    format: "html"
+    storage: "s3"  # local, s3, database
+    retention_days: 365
+
+# Analytics Settings
+analytics:
+  enabled: true
+  
+  # Metrics collection
+  metrics:
+    - "request_count"
+    - "response_time"
+    - "token_usage"
+    - "cost"
+    - "cache_hit_rate"
+    - "error_rate"
+    - "user_satisfaction"
+  
+  # Retention
+  retention:
+    raw_events: 30  # days
+    hourly_aggregates: 90
+    daily_aggregates: 365
+    monthly_aggregates: 0  # permanent
+  
+  # Dashboard
+  dashboard:
+    enabled: true
+    refresh_interval: 60  # seconds
+
+# Moderation Settings
+moderation:
+  enabled: true
+  
+  # Auto-moderation
+  auto_mod:
+    enabled: true
+    providers:
+      - "openai"
+    categories:
+      - "hate"
+      - "hate/threatening"
+      - "self-harm"
+      - "sexual"
+      - "sexual/minors"
+      - "violence"
+      - "violence/graphic"
+    thresholds:
+      block: 0.8
+      flag: 0.5
+  
+  # Spam detection
+  spam_detection:
+    enabled: true
+    max_messages: 5
+    window: 10  # seconds
+    action: "mute"  # warn, mute, kick, ban
+
+# Feature Flags
+features:
+  # Core features
+  tickets: true
+  knowledge_base: true
+  conversation_memory: true
+  cost_tracking: true
+  analytics: true
+  
+  # Optional features
+  voice_support: false
+  image_generation: false
+  code_execution: false
+  slack_integration: false
+  
+  # Experimental features
+  multi_modal: false
+  agent_mode: false
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  
+  handlers:
+    console:
+      enabled: true
+      level: "INFO"
+    
+    file:
+      enabled: true
+      level: "DEBUG"
+      path: "logs/bot.log"
+      rotation: "midnight"
+      retention: 30  # days
+    
+    sentry:
+      enabled: false
+      level: "ERROR"
+      dsn: ""
+  
+  # Sensitive data filtering
+  filter_sensitive: true
+  sensitive_patterns:
+    - "token"
+    - "password"
+    - "secret"
+    - "key"
+    - "credential"
+
+# Development Settings
+development:
+  # Hot reload
+  hot_reload: false
+  
+  # Debug mode
+  debug: false
+  
+  # Test guild (for slash command testing)
+  test_guild_id: null
+  
+  # Mock AI responses (for testing without API calls)
+  mock_ai: false
