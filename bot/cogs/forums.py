@@ -6,18 +6,15 @@ responses and keyword matching for support queries.
 
 import asyncio
 import logging
+import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Set
 from dataclasses import dataclass
 
 import discord
 from discord.ext import commands
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, JSON, Text
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.orm import relationship
-
 from database.connection import get_db_context
-from database.models import Base, TimestampMixin, Guild, QueryAnalytics
+from database.models import Base, TimestampMixin, Guild, QueryAnalytics, ForumConfig, ForumThread
 from keywords.engine import KeywordEngine
 from ai.router import AIRouter, ChatCompletionRequest, ChatMessage, RoutingStrategy
 from bot.embed_builder import EmbedBuilder, EmbedColors
@@ -25,84 +22,6 @@ from cache.redis_client import get_redis_client, rate_limit
 from monitoring.logging_config import get_logger, set_guild_context, LogContext
 
 logger = get_logger(__name__)
-
-
-class ForumConfig(Base, TimestampMixin):
-    """Configuration for monitored forum channels.
-
-    Stores settings for which forums to monitor and how to respond.
-    """
-
-    __tablename__ = "forum_configs"
-
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    guild_id = Column(
-        UUID(as_uuid=True), ForeignKey("guilds.id", ondelete="CASCADE"), nullable=False
-    )
-    forum_channel_id = Column(String(20), nullable=False, index=True)
-
-    # Monitoring settings
-    is_active = Column(Boolean, default=True, nullable=False)
-    auto_respond = Column(Boolean, default=True, nullable=False)
-    max_responses_per_thread = Column(Integer, default=5, nullable=False)
-
-    # Tag filtering
-    include_tags = Column(ARRAY(String), default=list, nullable=False)
-    exclude_tags = Column(ARRAY(String), default=list, nullable=False)
-    require_tags = Column(Boolean, default=False, nullable=False)
-
-    # Response settings
-    welcome_message_template = Column(Text, nullable=True)
-    ai_temperature = Column(Integer, default=7, nullable=False)  # 0-10 scale
-    use_keywords_first = Column(Boolean, default=True, nullable=False)
-
-    # Analytics
-    threads_created = Column(Integer, default=0, nullable=False)
-    responses_sent = Column(Integer, default=0, nullable=False)
-
-    # Relationships
-    guild = relationship("Guild", back_populates="forum_configs")
-    threads = relationship(
-        "ForumThread", back_populates="forum_config", cascade="all, delete-orphan"
-    )
-
-
-class ForumThread(Base, TimestampMixin):
-    """Tracked forum threads for monitoring and analytics.
-
-    Stores thread metadata and response tracking.
-    """
-
-    __tablename__ = "forum_threads"
-
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    forum_config_id = Column(
-        UUID(as_uuid=True), ForeignKey("forum_configs.id", ondelete="CASCADE"), nullable=False
-    )
-
-    # Discord identifiers
-    thread_id = Column(String(20), nullable=False, index=True)
-    guild_id = Column(String(20), nullable=False, index=True)
-    channel_id = Column(String(20), nullable=False, index=True)
-    owner_id = Column(String(20), nullable=False)
-
-    # Thread metadata
-    title = Column(String(100), nullable=False)
-    initial_message_id = Column(String(20), nullable=True)
-    tags = Column(ARRAY(String), default=list, nullable=False)
-
-    # Response tracking
-    response_count = Column(Integer, default=0, nullable=False)
-    last_response_at = Column(DateTime, nullable=True)
-    is_resolved = Column(Boolean, default=False, nullable=False)
-
-    # Analytics
-    first_response_time_ms = Column(Integer, nullable=True)
-    total_messages = Column(Integer, default=0, nullable=False)
-    metadata = Column(JSON, default=dict, nullable=False)
-
-    # Relationships
-    forum_config = relationship("ForumConfig", back_populates="threads")
 
 
 @dataclass
@@ -115,7 +34,7 @@ class ThreadContext:
     initial_message: Optional[discord.Message] = None
 
 
-class ForumsCog(commands.Cog):
+class Forums(commands.Cog):
     """Forum monitoring and auto-response cog."""
 
     def __init__(
@@ -137,15 +56,15 @@ class ForumsCog(commands.Cog):
         self.rate_limit_max = 10
         self.rate_limit_window = 60
 
-        logger.info("ForumsCog initialized")
+        logger.info("Forums initialized")
 
     async def cog_load(self):
         """Called when the cog is loaded."""
-        logger.info("ForumsCog loaded")
+        logger.info("Forums loaded")
 
     async def cog_unload(self):
         """Called when the cog is unloaded."""
-        logger.info("ForumsCog unloaded")
+        logger.info("Forums unloaded")
 
     # =========================================================================
     # Event Listeners
@@ -643,7 +562,7 @@ class ForumsCog(commands.Cog):
 
                 # Create thread record
                 db_thread = ForumThread(
-                    id=__import__("uuid").uuid4(),
+                    id=uuid.uuid4(),
                     forum_config_id=forum_config.id,
                     thread_id=str(thread.id),
                     guild_id=str(thread.guild.id),
@@ -711,7 +630,7 @@ class ForumsCog(commands.Cog):
 
                 # Create analytics record
                 analytics = QueryAnalytics(
-                    id=__import__("uuid").uuid4(),
+                    id=uuid.uuid4(),
                     guild_id=guild.id,
                     query=query,
                     response=None,  # Not storing full response
@@ -763,7 +682,7 @@ class ForumsCog(commands.Cog):
                 guild = db.query(Guild).filter(Guild.discord_id == str(ctx.guild.id)).first()
                 if not guild:
                     guild = Guild(
-                        id=__import__("uuid").uuid4(),
+                        id=uuid.uuid4(),
                         discord_id=str(ctx.guild.id),
                         name=ctx.guild.name,
                     )
@@ -791,7 +710,7 @@ class ForumsCog(commands.Cog):
                 else:
                     # Create new config
                     config = ForumConfig(
-                        id=__import__("uuid").uuid4(),
+                        id=uuid.uuid4(),
                         guild_id=guild.id,
                         forum_channel_id=str(channel.id),
                         is_active=True,
@@ -926,4 +845,4 @@ class ForumsCog(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Add the cog to the bot."""
-    await bot.add_cog(ForumsCog(bot))
+    await bot.add_cog(Forums(bot))
