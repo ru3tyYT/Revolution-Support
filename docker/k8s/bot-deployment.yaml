@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discord-bot
+  namespace: supportbot
+  labels:
+    app: discord-bot
+    component: bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discord-bot
+  template:
+    metadata:
+      labels:
+        app: discord-bot
+        component: bot
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: discord-bot
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: bot
+        image: discord-support-bot:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: metrics
+        env:
+        - name: DISCORD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: discord-bot-secrets
+              key: discord-token
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: discord-bot-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/0"
+        - name: CELERY_BROKER_URL
+          value: "redis://redis-service:6379/1"
+        - name: CELERY_RESULT_BACKEND
+          value: "redis://redis-service:6379/2"
+        - name: CLUSTER_MODE
+          value: "true"
+        - name: CLUSTER_SHARD_COUNT
+          value: "2"
+        - name: CLUSTER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: discord-bot-config
+              key: log-level
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: discord-bot-config
+              key: environment
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import asyncio; import discord; print('OK')"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import asyncio; import discord; print('OK')"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: discord-bot-hpa
+  namespace: supportbot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: discord-bot
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60

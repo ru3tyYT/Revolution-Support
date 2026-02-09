@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: discord-bot-config
+  namespace: supportbot
+data:
+  log-level: "INFO"
+  environment: "production"
+  bot-prefix: "!"
+  max-conversations: "1000"
+  cache-ttl: "3600"
+  research-timeout: "300"
+  vector-dimension: "1536"
+  max-search-results: "5"
+  enable-auto-research: "true"
+  enable-feedback: "true"
+  enable-analytics: "true"
+  prometheus-port: "8080"
+  metrics-enabled: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: supportbot
+data:
+  postgresql.conf: |
+    # Connection settings
+    max_connections = 200
+    shared_buffers = 256MB
+    effective_cache_size = 768MB
+    
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_rotation_age = 1d
+    log_rotation_size = 100MB
+    
+    # Performance
+    work_mem = 4MB
+    maintenance_work_mem = 64MB
+    
+    # pgvector settings
+    shared_preload_libraries = 'pgvector'
