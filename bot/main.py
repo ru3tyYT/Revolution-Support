@@ -12,6 +12,8 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 
+from ai.router import AIRouter
+
 from .config import Config
 from .shard_manager import ShardManager
 
@@ -64,10 +66,50 @@ class SupportBot(commands.AutoShardedBot):
 
         self.start_time: float = 0.0
         self.shard_manager: ShardManager | None = None
+        self.ai_router = AIRouter()
+
+    def initialize_ai_providers(self) -> None:
+        """Initialize AI providers based on environment configuration."""
+        providers_registered: list[str] = []
+
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            self.ai_router.register_openai(openai_key)
+            providers_registered.append("openai")
+
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        if anthropic_key:
+            self.ai_router.register_anthropic(anthropic_key)
+            providers_registered.append("anthropic")
+
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            self.ai_router.register_groq(groq_key)
+            providers_registered.append("groq")
+
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        if openrouter_key:
+            self.ai_router.register_openrouter(openrouter_key)
+            providers_registered.append("openrouter")
+
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL")
+        if ollama_base_url:
+            self.ai_router.register_ollama(api_base=ollama_base_url)
+            providers_registered.append("ollama")
+
+        if providers_registered:
+            logger.info(
+                "AI providers registered: %s",
+                ", ".join(providers_registered),
+            )
+        else:
+            logger.info("No AI providers registered; missing API keys")
 
     async def setup_hook(self) -> None:
         """Called when the bot is starting up."""
         logger.info("Setting up bot...")
+
+        self.initialize_ai_providers()
 
         # Initialize shard manager if clustering is enabled
         if Config.CLUSTER_ENABLED:

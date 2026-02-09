@@ -845,4 +845,4 @@ class Forums(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Add the cog to the bot."""
-    await bot.add_cog(Forums(bot))
+    await bot.add_cog(Forums(bot, ai_router=bot.ai_router))
