@@ -86,7 +86,7 @@ services:
       dockerfile: docker/Dockerfile
       target: production
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=info --concurrency=2
+    command: celery -A research.tasks worker --loglevel=info --concurrency=2
     env_file:
       - .env
     environment:
@@ -113,7 +113,7 @@ services:
       target: production
     container_name: discord-bot-beat
     restart: unless-stopped
-    command: celery -A src.tasks beat --loglevel=info
+    command: celery -A research.tasks beat --loglevel=info
     env_file:
       - .env
     environment:
