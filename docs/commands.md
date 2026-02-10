@@ -16,7 +16,7 @@ Complete reference for all Discord Support Bot commands.
 
 ## Command Overview
 
-The bot supports both slash commands (`/command`) and legacy prefix commands (`!command`). Slash commands are recommended for the best user experience.
+The bot uses slash commands (`/command`) for the best user experience.
 
 ## General Commands
 
@@ -63,26 +63,6 @@ Latency: 45ms
 WebSocket: 32ms
 Uptime: 2 days, 4 hours
 ```
-
-**Permissions:** Everyone
-
----
-
-### `/status`
-
-Display detailed bot status information.
-
-**Usage:**
-```
-/status
-```
-
-**Response Fields:**
-- Bot status and version
-- Active connections
-- AI provider status
-- Database status
-- Cache status
 
 **Permissions:** Everyone
 
@@ -136,100 +116,24 @@ Ask a question to the AI support system.
 
 **Permissions:** Everyone
 
----
-
-### `/ticket create`
-
-Create a support ticket.
-
-**Usage:**
-```
-/ticket create issue:<description> [priority:low/medium/high/urgent]
-```
-
-**Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| issue | string | Yes | Description of the issue |
-| priority | choice | No | Ticket priority level |
-
-**Examples:**
-```
-/ticket create issue:Can't access my account
-/ticket create issue:API returning 500 errors priority:high
-```
-
-**Permissions:** Everyone
-
----
-
-### `/ticket view`
-
-View your active tickets.
-
-**Usage:**
-```
-/ticket view [ticket_id]
-```
-
-**Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| ticket_id | string | No | Specific ticket to view |
-
-**Permissions:** Everyone
-
----
-
-### `/ticket close`
-
-Close a support ticket.
-
-**Usage:**
-```
-/ticket close ticket_id:<ticket_id> [reason:<reason>]
-```
-
-**Permissions:** Everyone (own tickets), Support Team (any ticket)
-
----
-
-### `/escalate`
-
-Escalate a conversation to human support.
-
-**Usage:**
-```
-/escalate [reason:<reason>]
-```
-
-**Permissions:** Everyone
-
----
-
-### `/resolve`
-
-Mark a ticket or thread as resolved.
-
-**Usage:**
-```
-/resolve [thread:<thread>]
-```
-
-**Permissions:** Everyone (own threads), Support Team (any thread)
-
 ## Knowledge Base Commands
 
 Commands for searching and managing knowledge base documents.
 
-### `/knowledge search`
+### `/knowledge`
 
-Search the knowledge base.
+Knowledge base management with subcommands.
 
 **Usage:**
 ```
-/knowledge search query:<search terms>
+/knowledge action:<action> [parameters]
 ```
+
+**Actions:**
+
+#### `action:search`
+
+Search the knowledge base.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -238,8 +142,8 @@ Search the knowledge base.
 
 **Examples:**
 ```
-/knowledge search password reset
-/knowledge search API authentication
+/knowledge action:search query:password reset
+/knowledge action:search query:API authentication
 ```
 
 **Response:**
@@ -250,16 +154,9 @@ Search the knowledge base.
 
 **Permissions:** Everyone
 
----
-
-### `/knowledge add`
+#### `action:add`
 
 Add a document to the knowledge base.
-
-**Usage:**
-```
-/knowledge add title:<title> content:<content>
-```
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -269,96 +166,14 @@ Add a document to the knowledge base.
 
 **Permissions:** Manage Guild
 
----
-
-### `/knowledge_upload`
-
-Upload a file to the knowledge base.
-
-**Usage:**
-```
-/knowledge_upload file:<attachment> [title:<title>]
-```
-
-**Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| file | attachment | Yes | File to upload (.txt, .md, .json, .py, .js, .html, .css) |
-| title | string | No | Document title (defaults to filename) |
-
-**Examples:**
-```
-/knowledge_upload file:api-docs.md
-/knowledge_upload file:faq.txt title:"Frequently Asked Questions"
-```
-
-**Supported File Types:**
-- `.txt` - Plain text
-- `.md` - Markdown
-- `.json` - JSON files
-- `.py` - Python files
-- `.js` - JavaScript files
-- `.html` - HTML files
-- `.css` - CSS files
-
-**File Size Limit:** 1 MB
-
-**Permissions:** Manage Guild
-
----
-
-### `/knowledge list`
+#### `action:list`
 
 List all knowledge base documents.
-
-**Usage:**
-```
-/knowledge list
-```
 
 **Response:**
 - Document list with IDs
 - Last updated timestamps
 - Document types
-
-**Permissions:** Manage Guild
-
----
-
-### `/knowledge view`
-
-View a specific knowledge base document.
-
-**Usage:**
-```
-/knowledge view document_id:<id>
-```
-
-**Permissions:** Manage Guild
-
----
-
-### `/knowledge remove`
-
-Remove a document from the knowledge base.
-
-**Usage:**
-```
-/knowledge remove document_id:<id>
-```
-
-**Permissions:** Manage Guild
-
----
-
-### `/knowledge edit`
-
-Edit an existing knowledge base document.
-
-**Usage:**
-```
-/knowledge edit document_id:<id> content:<new content>
-```
 
 **Permissions:** Manage Guild
 
@@ -393,176 +208,6 @@ Configure a forum channel for monitoring.
 
 **Permissions:** Administrator
 
----
-
-### `/forum edit auto_respond`
-
-Toggle automatic AI responses.
-
-**Usage:**
-```
-/forum edit auto_respond channel:<forum> enabled:<true/false>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit welcome_message`
-
-Set the welcome message for new threads.
-
-**Usage:**
-```
-/forum edit welcome_message channel:<forum> [message:<text>]
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit ai_model`
-
-Change the AI model for responses.
-
-**Usage:**
-```
-/forum edit ai_model channel:<forum> model:<model choice>
-```
-
-**Available Models:**
-- GPT-4
-- GPT-4 Turbo
-- GPT-3.5 Turbo
-- Claude 3 Opus
-- Claude 3 Sonnet
-- Claude 3 Haiku
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit response_delay`
-
-Set the response delay.
-
-**Usage:**
-```
-/forum edit response_delay channel:<forum> seconds:<0-300>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit max_responses`
-
-Set maximum responses per thread.
-
-**Usage:**
-```
-/forum edit max_responses channel:<forum> count:<1-50>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit include_tags`
-
-Set tags to monitor (comma-separated).
-
-**Usage:**
-```
-/forum edit include_tags channel:<forum> [tags:<tag1,tag2>]
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum edit exclude_tags`
-
-Set tags to exclude.
-
-**Usage:**
-```
-/forum edit exclude_tags channel:<forum> tags:<tag1,tag2>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum enable`
-
-Re-enable monitoring for a forum.
-
-**Usage:**
-```
-/forum enable channel:<forum>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum disable`
-
-Disable monitoring for a forum.
-
-**Usage:**
-```
-/forum disable channel:<forum>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum status`
-
-Show current forum configuration.
-
-**Usage:**
-```
-/forum status channel:<forum>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum list`
-
-List all monitored forums.
-
-**Usage:**
-```
-/forum list
-```
-
-**Permissions:** Administrator
-
----
-
-### `/forum stats`
-
-Show forum statistics.
-
-**Usage:**
-```
-/forum stats [channel:<forum>]
-```
-
-**Response Fields:**
-- Total threads
-- AI responses sent
-- Resolution rate
-- Resolved/closed/active counts
-
-**Permissions:** Administrator
-
 ## Settings Commands
 
 Commands for configuring bot settings.
@@ -574,85 +219,6 @@ View current bot settings.
 **Usage:**
 ```
 /settings view
-```
-
-**Permissions:** Administrator
-
----
-
-### `/settings model`
-
-Change the AI model.
-
-**Usage:**
-```
-/settings model model:<model choice>
-```
-
-**Available Models:**
-- GPT-4
-- GPT-4 Turbo
-- GPT-3.5 Turbo
-- Claude 3 Opus
-- Claude 3 Sonnet
-- Claude 3 Haiku
-
-**Permissions:** Administrator
-
----
-
-### `/settings provider`
-
-Change the AI provider.
-
-**Usage:**
-```
-/settings provider provider:<provider choice>
-```
-
-**Available Providers:**
-- OpenAI
-- Anthropic
-- Google
-- Azure OpenAI
-
-**Permissions:** Administrator
-
----
-
-### `/settings rotate-api-key`
-
-Manually rotate API keys.
-
-**Usage:**
-```
-/settings rotate-api-key
-```
-
-**Permissions:** Administrator
-
----
-
-### `/settings auto-rotate`
-
-Toggle automatic API key rotation.
-
-**Usage:**
-```
-/settings auto-rotate state:<on/off>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/settings fallback`
-
-Toggle fallback mode.
-
-**Usage:**
-```
-/settings fallback state:<on/off>
 ```
 
 **Permissions:** Administrator
@@ -681,19 +247,6 @@ Toggle maintenance mode.
 **Usage:**
 ```
 /admin maintenance state:<on/off>
-```
-
-**Permissions:** Administrator
-
----
-
-### `/admin logs`
-
-View recent bot logs.
-
-**Usage:**
-```
-/admin logs
 ```
 
 **Permissions:** Administrator
@@ -736,43 +289,17 @@ Reload a bot cog (for development).
 
 **Permissions:** Administrator
 
----
-
-### `/admin costs`
-
-Show cost breakdown and usage.
-
-**Usage:**
-```
-/admin costs [period:<time period>]
-```
-
-**Permissions:** Administrator
-
----
-
-### `/admin rate-limit`
-
-Set rate limits for a user.
-
-**Usage:**
-```
-/admin rate-limit user:<@user> seconds:<duration>
-```
-
-**Permissions:** Administrator
-
 ## Research Commands
 
 Commands for advanced research and analysis.
 
-### `/research search`
+### `/research`
 
 Perform a web search with AI analysis.
 
 **Usage:**
 ```
-/research search query:<search terms> [depth:basic/detailed/comprehensive]
+/research query:<search terms> [depth:basic/detailed/comprehensive]
 ```
 
 **Parameters:**
@@ -783,47 +310,60 @@ Perform a web search with AI analysis.
 
 **Examples:**
 ```
-/research search query:"Python async best practices"
-/research search query:"Discord API rate limits" depth:comprehensive
+/research query:"Python async best practices"
+/research query:"Discord API rate limits" depth:comprehensive
 ```
 
 **Permissions:** Everyone
 
 ---
 
-### `/research compare`
+### `/research_status`
+
+Check the status of your research request.
+
+**Usage:**
+```
+/research_status [research_id:<id>]
+```
+
+**Permissions:** Everyone
+
+---
+
+### `/research_queue`
+
+View the research queue status.
+
+**Usage:**
+```
+/research_queue
+```
+
+**Permissions:** Everyone
+
+---
+
+### `/research_cancel`
+
+Cancel a pending or in-progress research request.
+
+**Usage:**
+```
+/research_cancel research_id:<id>
+```
+
+**Permissions:** Everyone
+
+---
+
+### `/research_compare`
 
 Compare multiple items with research.
 
 **Usage:**
 ```
-/research compare items:<item1,item2> criteria:<criterion1,criterion2>
-```
-
-**Permissions:** Everyone
-
----
-
-### `/research analyze`
-
-Analyze a topic or document.
-
-**Usage:**
-```
-/research analyze content:<text or URL> [type:sentiment/keywords/summary]
-```
-
-**Permissions:** Everyone
-
----
-
-### `/research diagnose`
-
-Diagnose an issue with troubleshooting steps.
-
-**Usage:**
-```
-/research diagnose problem:<description> [symptoms:<symptom1,symptom2>]
+/research_compare items:<item1,item2> criteria:<criterion1,criterion2>
 ```
 
 **Permissions:** Everyone
@@ -846,31 +386,16 @@ Diagnose an issue with troubleshooting steps.
 |---------|----------|--------------|--------------|---------------|
 | `/help` | ✅ | ✅ | ✅ | ✅ |
 | `/ping` | ✅ | ✅ | ✅ | ✅ |
+| `/stats` | ✅ | ✅ | ✅ | ✅ |
 | `/ask` | ✅ | ✅ | ✅ | ✅ |
-| `/ticket create` | ✅ | ✅ | ✅ | ✅ |
-| `/knowledge search` | ✅ | ✅ | ✅ | ✅ |
-| `/ticket close` | Own | Any | Any | Any |
-| `/knowledge add` | ❌ | ❌ | ✅ | ✅ |
-| `/knowledge_upload` | ❌ | ❌ | ✅ | ✅ |
+| `/knowledge action:search` | ✅ | ✅ | ✅ | ✅ |
+| `/knowledge action:add` | ❌ | ❌ | ✅ | ✅ |
+| `/knowledge action:list` | ❌ | ❌ | ✅ | ✅ |
 | `/forum setup` | ❌ | ❌ | ❌ | ✅ |
-| `/settings model` | ❌ | ❌ | ❌ | ✅ |
+| `/settings view` | ❌ | ❌ | ❌ | ✅ |
 | `/admin maintenance` | ❌ | ❌ | ❌ | ✅ |
-
-## Legacy Prefix Commands
-
-The bot also supports legacy prefix commands (default prefix: `!`):
-
-```
-!help
-!ping
-!ask <question>
-!kb search <query>
-!forum monitor <channel>
-!config
-!stats
-```
-
-To change the prefix, set the `BOT_PREFIX` environment variable.
+| `/admin system` | ❌ | ❌ | ❌ | ✅ |
+| `/admin reload` | ❌ | ❌ | ❌ | ✅ |
 
 ## Command Usage Tips
 
