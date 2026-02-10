@@ -65,9 +65,9 @@ def get_database_url() -> str:
     db_url = os.getenv("DATABASE_URL")
 
     if not db_url:
-        print("\nDATABASE_URL environment variable not set.")
-        print("Please set it to your PostgreSQL database URL.")
-        print("Example: postgresql://user:password@localhost:5432/supportbot")
+        logger.error("\nDATABASE_URL environment variable not set.")
+        logger.error("Please set it to your PostgreSQL database URL.")
+        logger.error("Example: postgresql://user:password@localhost:5432/supportbot")
         sys.exit(1)
 
     return db_url
@@ -78,22 +78,22 @@ def get_encryption_manager() -> EncryptionManager:
     encryption_key = os.getenv("ENCRYPTION_KEY")
 
     if not encryption_key:
-        print("\n" + "=" * 70)
-        print("ERROR: ENCRYPTION_KEY environment variable not set!")
-        print("=" * 70)
-        print("\nTo generate an encryption key, run:")
-        print(
+        logger.error("\n" + "=" * 70)
+        logger.error("ERROR: ENCRYPTION_KEY environment variable not set!")
+        logger.error("=" * 70)
+        logger.error("\nTo generate an encryption key, run:")
+        logger.error(
             '   export ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")'
         )
-        print("\nOr use the encryption utility:")
-        print("   python bot/utils/encryption.py --generate-key")
-        print("=" * 70 + "\n")
+        logger.error("\nOr use the encryption utility:")
+        logger.error("   python bot/utils/encryption.py --generate-key")
+        logger.error("=" * 70 + "\n")
         sys.exit(1)
 
     try:
         return EncryptionManager(encryption_key)
     except EncryptionKeyError as e:
-        print(f"\nERROR: Invalid encryption key: {e}")
+        logger.error(f"\nERROR: Invalid encryption key: {e}")
         sys.exit(1)
 
 
@@ -243,29 +243,29 @@ def print_status():
     with Session(engine) as session:
         status = check_encryption_status(session)
 
-    print("\n" + "=" * 70)
-    print("API Key Encryption Status")
-    print("=" * 70)
-    print(f"\nTotal API keys:     {status['total']}")
-    print(
+    logger.info("\n" + "=" * 70)
+    logger.info("API Key Encryption Status")
+    logger.info("=" * 70)
+    logger.info(f"\nTotal API keys:     {status['total']}")
+    logger.info(
         f"Encrypted:          {status['encrypted']} ({status['encrypted'] / status['total'] * 100:.1f}%)"
     )
-    print(
+    logger.info(
         f"Plaintext (legacy): {status['plaintext']} ({status['plaintext'] / status['total'] * 100:.1f}%)"
     )
 
     if status["plaintext"] > 0:
-        print("\nWARNING: Some API keys are stored as plaintext (INSECURE)")
-        print("\nPlaintext keys:")
+        logger.warning("\nWARNING: Some API keys are stored as plaintext (INSECURE)")
+        logger.info("\nPlaintext keys:")
         for row in status["keys"]:
             if row[3] and not row[3].startswith(ENCRYPTION_PREFIX):
-                print(f"  - {row[1]}/{row[2]}")
-        print("\nRun this script without --status to encrypt them:")
-        print("   python scripts/migrate_encrypt_api_keys.py")
+                logger.info(f"  - {row[1]}/{row[2]}")
+        logger.info("\nRun this script without --status to encrypt them:")
+        logger.info("   python scripts/migrate_encrypt_api_keys.py")
     else:
-        print("\nAll API keys are encrypted.")
+        logger.info("\nAll API keys are encrypted.")
 
-    print("=" * 70 + "\n")
+    logger.info("=" * 70 + "\n")
 
 
 def main():
@@ -307,35 +307,35 @@ Examples:
         return
 
     # Run migration
-    print("\n" + "=" * 70)
+    logger.info("\n" + "=" * 70)
     if args.dry_run:
-        print("API Key Encryption Migration (DRY RUN)")
+        logger.info("API Key Encryption Migration (DRY RUN)")
     else:
-        print("API Key Encryption Migration")
-    print("=" * 70 + "\n")
+        logger.info("API Key Encryption Migration")
+    logger.info("=" * 70 + "\n")
 
     try:
         stats = migrate_api_keys(dry_run=args.dry_run)
 
-        print("\n" + "=" * 70)
-        print("Migration Summary")
-        print("=" * 70)
-        print(f"  Total keys:  {stats['total']}")
-        print(f"  Encrypted:   {stats['encrypted']}")
-        print(f"  Skipped:     {stats['skipped']}")
-        print(f"  Errors:      {stats['errors']}")
+        logger.info("\n" + "=" * 70)
+        logger.info("Migration Summary")
+        logger.info("=" * 70)
+        logger.info(f"  Total keys:  {stats['total']}")
+        logger.info(f"  Encrypted:   {stats['encrypted']}")
+        logger.info(f"  Skipped:     {stats['skipped']}")
+        logger.info(f"  Errors:      {stats['errors']}")
 
         if args.dry_run:
-            print("\nNOTE: This was a dry run. No changes were made.")
-            print("Run without --dry-run to apply changes.")
+            logger.info("\nNOTE: This was a dry run. No changes were made.")
+            logger.info("Run without --dry-run to apply changes.")
 
-        print("=" * 70 + "\n")
+        logger.info("=" * 70 + "\n")
 
         if stats["errors"] > 0:
             sys.exit(1)
 
     except Exception as e:
-        logger.error(f"Migration failed: {e}")
+        logger.exception(f"Migration failed: {e}")
         sys.exit(1)
 
 

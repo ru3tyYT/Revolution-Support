@@ -7,10 +7,19 @@ and keywords for better AI matching.
 """
 
 import json
+import logging
 import sys
 import os
 from datetime import datetime
 from typing import List, Dict, Any
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -205,7 +214,7 @@ def create_document(db: Session, fix: Dict[str, Any]) -> Document:
 
 def import_verified_fixes():
     """Import all verified fixes into the database."""
-    print("Importing verified fixes into database...")
+    logger.info("Importing verified fixes into database...")
 
     db = SessionLocal()
     try:
@@ -215,23 +224,23 @@ def import_verified_fixes():
             # Check if already exists
             existing = db.query(Document).filter(Document.id == fix["id"]).first()
             if existing:
-                print(f"  ⚠️  Skipping {fix['id']} - already exists")
+                logger.warning(f"  ⚠️  Skipping {fix['id']} - already exists")
                 continue
 
             # Create document
             doc = create_document(db, fix)
             db.add(doc)
             imported_count += 1
-            print(f"  ✓ Imported: {fix['title']}")
-            print(f"    Keywords: {', '.join(fix['keywords'][:5])}...")
+            logger.info(f"  ✓ Imported: {fix['title']}")
+            logger.debug(f"    Keywords: {', '.join(fix['keywords'][:5])}...")
 
         db.commit()
-        print(f"\n✅ Successfully imported {imported_count} verified fixes")
-        print(f"   Total keywords added: {db.query(Keyword).count()}")
+        logger.info(f"\n✅ Successfully imported {imported_count} verified fixes")
+        logger.info(f"   Total keywords added: {db.query(Keyword).count()}")
 
     except Exception as e:
         db.rollback()
-        print(f"\n❌ Error importing fixes: {e}")
+        logger.exception(f"\n❌ Error importing fixes: {e}")
         raise
     finally:
         db.close()
@@ -241,24 +250,24 @@ def generate_keyword_summary():
     """Generate a summary of all keywords for reference."""
     db = SessionLocal()
     try:
-        print("\n" + "=" * 60)
-        print("KEYWORD SUMMARY FOR VERIFIED FIXES")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("KEYWORD SUMMARY FOR VERIFIED FIXES")
+        logger.info("=" * 60)
 
         for fix in VERIFIED_FIXES:
-            print(f"\n{fix['title']}")
-            print(f"  Category: {fix['category']}")
-            print(f"  Keywords: {', '.join(fix['keywords'])}")
-            print(f"  Tags: {', '.join(fix['tags'])}")
+            logger.info(f"\n{fix['title']}")
+            logger.info(f"  Category: {fix['category']}")
+            logger.info(f"  Keywords: {', '.join(fix['keywords'])}")
+            logger.info(f"  Tags: {', '.join(fix['tags'])}")
 
-        print("\n" + "=" * 60)
-        print("AI MATCHING NOTES:")
-        print("=" * 60)
-        print("- Use content_short for quick AI responses")
-        print("- Use content_full when user needs detailed explanation")
-        print("- Keywords trigger automatic fix suggestions")
-        print("- Tags help categorize and filter fixes")
-        print("- All fixes marked as 'verified' = confirmed working solutions")
+        logger.info("\n" + "=" * 60)
+        logger.info("AI MATCHING NOTES:")
+        logger.info("=" * 60)
+        logger.info("- Use content_short for quick AI responses")
+        logger.info("- Use content_full when user needs detailed explanation")
+        logger.info("- Keywords trigger automatic fix suggestions")
+        logger.info("- Tags help categorize and filter fixes")
+        logger.info("- All fixes marked as 'verified' = confirmed working solutions")
 
     finally:
         db.close()
@@ -269,4 +278,4 @@ if __name__ == "__main__":
         generate_keyword_summary()
     else:
         import_verified_fixes()
-        print("\nRun with --summary to see keyword reference")
+        logger.info("\nRun with --summary to see keyword reference")
