@@ -11,7 +11,7 @@ from enum import Enum
 from datetime import datetime
 import random
 
-from .base import (
+from .providers.base import (
     BaseAIProvider,
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -19,11 +19,11 @@ from .base import (
     ProviderStatus,
     UsageInfo,
 )
-from .openai_provider import OpenAIProvider
-from .anthropic_provider import AnthropicProvider
-from .groq_provider import GroqProvider
-from .ollama_provider import OllamaProvider
-from .openrouter_provider import OpenRouterProvider
+from .providers.openai_provider import OpenAIProvider
+from .providers.anthropic_provider import AnthropicProvider
+from .providers.groq_provider import GroqProvider
+from .providers.ollama_provider import OllamaProvider
+from .providers.openrouter_provider import OpenRouterProvider
 
 logger = logging.getLogger(__name__)
 
