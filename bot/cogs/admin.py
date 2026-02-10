@@ -64,9 +64,7 @@ class Admin(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(
-                embed=error_embed(
-                    "Error", f"Failed to retrieve shard status: {str(e)}"
-                ),
+                embed=error_embed("Error", f"Failed to retrieve shard status: {str(e)}"),
                 ephemeral=True,
             )
 
@@ -130,9 +128,7 @@ class Admin(commands.Cog):
 
         except Exception as e:
             await interaction.response.send_message(
-                embed=error_embed(
-                    "Error", f"Failed to toggle maintenance mode: {str(e)}"
-                ),
+                embed=error_embed("Error", f"Failed to toggle maintenance mode: {str(e)}"),
                 ephemeral=True,
             )
 
@@ -158,15 +154,11 @@ class Admin(commands.Cog):
 
             log_text = ""
             for level, message, time in sample_logs:
-                emoji = {"INFO": "🟢", "WARN": "🟡", "ERROR": "🔴", "DEBUG": "⚪"}.get(
-                    level, "⚪"
-                )
+                emoji = {"INFO": "🟢", "WARN": "🟡", "ERROR": "🔴", "DEBUG": "⚪"}.get(level, "⚪")
                 log_text += f"{emoji} `[{level}]` {message} - *{time}*\n"
 
             embed.description = log_text
-            embed.set_footer(
-                text="Showing last 10 entries | Use /admin logs-file for full logs"
-            )
+            embed.set_footer(text="Showing last 10 entries | Use /admin logs-file for full logs")
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
@@ -227,15 +219,13 @@ class Admin(commands.Cog):
 
             try:
                 await self.bot.unload_extension(cog_path)
-            except:
+            except Exception:
                 pass
 
             await self.bot.load_extension(cog_path)
 
             await interaction.response.send_message(
-                embed=success_embed(
-                    "Cog Reloaded", f"Successfully reloaded `{cog}` cog."
-                ),
+                embed=success_embed("Cog Reloaded", f"Successfully reloaded `{cog}` cog."),
                 ephemeral=True,
             )
         except Exception as e:

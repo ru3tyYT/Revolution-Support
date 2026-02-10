@@ -169,15 +169,12 @@ class RAGSystem:
                     updated = datetime.fromisoformat(result.metadata["updated_at"])
                     days_old = (datetime.utcnow() - updated).days
                     recency_score = max(0.5, 1.0 - days_old / 365)
-                except:
+                except Exception:
                     pass
 
             # Combine scores
             combined_score = (
-                score * 0.5
-                + keyword_score * 0.25
-                + position_score * 0.15
-                + recency_score * 0.1
+                score * 0.5 + keyword_score * 0.25 + position_score * 0.15 + recency_score * 0.1
             )
 
             result.rerank_score = combined_score
@@ -377,9 +374,7 @@ Answer:"""
         """
         # Get embedding for the document's first chunk
         chunk = (
-            self.db.query(KnowledgeChunk)
-            .filter(KnowledgeChunk.document_id == document_id)
-            .first()
+            self.db.query(KnowledgeChunk).filter(KnowledgeChunk.document_id == document_id).first()
         )
 
         if not chunk:

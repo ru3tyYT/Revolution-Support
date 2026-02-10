@@ -8,8 +8,6 @@ import re
 from collections import Counter
 from typing import Any
 
-import requests
-
 logger = logging.getLogger(__name__)
 
 
@@ -193,10 +191,7 @@ class ResearchAnalyzer:
 
             sentence_scores = []
             for sent in sentences:
-                score = sum(
-                    word_freq.get(word.lower(), 0)
-                    for word in re.findall(r"\b\w+\b", sent)
-                )
+                score = sum(word_freq.get(word.lower(), 0) for word in re.findall(r"\b\w+\b", sent))
                 sentence_scores.append((sent, score))
 
             # Select top sentences
@@ -454,9 +449,7 @@ class ResearchAnalyzer:
             context_words = context_lower.split()
             try:
                 idx = context_words.index(item_name.split()[0])
-                surrounding = context_words[
-                    max(0, idx - 5) : min(len(context_words), idx + 5)
-                ]
+                surrounding = context_words[max(0, idx - 5) : min(len(context_words), idx + 5)]
                 positive_words = ["best", "recommended", "top", "great", "excellent"]
                 if any(p in surrounding for p in positive_words):
                     score = min(score + 0.2, 1.0)
