@@ -45,7 +45,7 @@ Discord Support Bot is an intelligent, cost-optimized support automation system 
 | 🔍 Auto Research | Autonomous subagent investigation | ✅ |
 | 🎨 Discord Embeds | Rich, formatted embed responses only | ✅ |
 | 💸 Free Models | Groq, Ollama Cloud support | ✅ |
-| 🚀 Horizontal Scaling | Sharding for 250k+ users | ✅ |
+| 🚀 Horizontal Scaling | Basic shard manager implementation | ✅ |
 
 ### Architecture Overview
 
@@ -144,6 +144,7 @@ Automatically monitor and respond to support forums:
 - **Thread Management**: Creates organized conversation threads
 - **Human Handoff**: Escalates when confidence is low
 - **Response Time**: Average 2-3 second response time
+- **Configuration**: Full `/forum` command suite for setup and management
 
 ### 📚 Knowledge Base with RAG
 
@@ -163,22 +164,31 @@ AI Synthesis → Discord Embed Response
 
 ### 🔍 Autonomous Subagent Research
 
-For complex issues, the bot spawns research subagents:
+For complex issues, the bot spawns research subagents powered by Celery workers:
 
 ```
 Main Bot Detects Complex Issue
          ↓
-Spawns Research Subagent
+Spawns Research Subagent (Celery Task)
          ↓
-├─ Searches Knowledge Base
+├─ Web Search Integration
 ├─ Queries Documentation
 ├─ Checks Similar Past Tickets
-└─ Gathers Context
+├─ Database Deep Lookups
+└─ Document Analysis
          ↓
 Synthesizes Response
          ↓
 Returns to User with Complete Answer
 ```
+
+**Celery Worker Tasks:**
+- `web_search` - Perform web searches for research queries
+- `api_query` - Query external APIs for data retrieval  
+- `database_lookup` - Deep database queries for research
+- `document_analysis` - Analyze documents for insights
+- `comparison` - Compare multiple options based on criteria
+- `troubleshooting` - Diagnose issues and provide solutions
 
 ### 🎨 Discord Embed-Only Responses
 
@@ -197,11 +207,34 @@ Run completely free with:
 - **Groq**: Free tier with generous limits
   - Llama 3 70B: 144,000 tokens/minute
   - Mixtral 8x7B: 144,000 tokens/minute
-  
+
 - **Ollama Cloud**: Self-hosted option
   - Run models on your infrastructure
   - Complete data privacy
   - No API costs
+
+### 🧩 Modular Cog Architecture
+
+The bot uses Discord.py's cog system for modular functionality:
+
+```
+bot/cogs/
+├── admin.py          # Admin dashboard and management
+├── disable.py        # Disable/enable bot features
+├── forum_commands.py # Forum configuration commands
+├── forums.py         # Forum monitoring and auto-responses
+├── knowledge.py      # Knowledge base management
+├── ping.py           # Basic ping/latency command
+├── research.py       # Research and subagent commands
+├── settings.py       # Bot settings configuration
+└── stats.py          # Statistics and analytics
+```
+
+Each cog is self-contained with its own:
+- Commands and command groups
+- Event listeners
+- Database models (via shared models)
+- Error handlers
 
 ---
 
@@ -231,7 +264,7 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 # 3. Install dependencies
 pip install -e ".[dev]"
 
-# 4. Configure environment
+# 4. Configure environment (required)
 cp .env.example .env
 # Edit .env with your API keys (see Configuration section)
 
@@ -298,14 +331,8 @@ MAX_DAILY_COST=10.00
 ### Running the Bot
 
 ```bash
-# Production mode
+# Start the bot
 python -m bot
-
-# Development mode (with hot reload)
-python -m bot --dev
-
-# With custom config
-python -m bot --config config/production.yaml
 ```
 
 ---
@@ -316,10 +343,12 @@ python -m bot --config config/production.yaml
 
 | Category | Commands | Description |
 |----------|----------|-------------|
-| 🎯 **General** | `!help`, `!status`, `!ping` | Basic bot interaction |
-| 💬 **Support** | `!ask`, `!ticket`, `!escalate` | User support features |
-| 📚 **Knowledge** | `!kb search`, `!kb upload` | Knowledge base management |
-| ⚙️ **Admin** | `!config`, `!stats`, `!costs` | Bot administration |
+| 🎯 **General** | `/ping` | Basic bot interaction |
+| 💬 **Support** | `/ask` | User support features |
+| 📚 **Knowledge** | `/knowledge`, `/ask` | Knowledge base management |
+| 📁 **Forum** | `/forum setup`, `/forum status` | Forum channel monitoring |
+| 🔍 **Research** | `/research` | Autonomous research tasks |
+| ⚙️ **Admin** | `/settings`, `/stats` | Bot administration |
 
 ### Most Important Commands
 
@@ -327,22 +356,17 @@ python -m bot --config config/production.yaml
 
 | Command | Usage | Description |
 |---------|-------|-------------|
-| `!help` | `!help [command]` | Show help information |
-| `!status` | `!status` | Check bot health and latency |
-| `!ping` | `!ping` | Test bot responsiveness |
+| `/ping` | `/ping` | Test bot responsiveness and check latency |
 
 #### Support Commands
 
 | Command | Usage | Description |
 |---------|-------|-------------|
-| `!ask` | `!ask How do I reset my password?` | Ask the AI a question |
-| `!ticket` | `!ticket My account is locked` | Create a support ticket |
-| `!escalate` | `!escalate` | Escalate to human support |
-| `!resolve` | `!resolve` | Mark ticket as resolved |
+| `/ask` | `/ask question:How do I enable 2FA?` | Ask the AI a question using knowledge base |
 
 **Example:**
 ```
-User: !ask How do I enable 2FA?
+User: /ask question:How do I enable 2FA?
 Bot: [Rich embed with step-by-step instructions]
 ```
 
@@ -350,30 +374,44 @@ Bot: [Rich embed with step-by-step instructions]
 
 | Command | Usage | Permission |
 |---------|-------|------------|
-| `!kb search` | `!kb search password reset` | Everyone |
-| `!kb upload` | `!kb upload` (with file attachment) | Admin |
-| `!kb list` | `!kb list` | Admin |
-| `!kb delete` | `!kb delete doc_123` | Admin |
+| `/knowledge` | `/knowledge action:search query:password reset` | Everyone |
+| `/knowledge` | `/knowledge action:add title_or_id:FAQ Content` | Admin |
+| `/knowledge_upload` | `/knowledge_upload file:document.txt` | Admin |
+| `/ask` | `/ask question:How do I reset my password?` | Everyone |
 
 #### Admin Commands
 
 | Command | Usage | Description |
 |---------|-------|-------------|
-| `!config` | `!config` | View current configuration |
-| `!stats` | `!stats [days]` | Show usage statistics |
-| `!costs` | `!costs` | Display cost breakdown |
-| `!provider` | `!provider groq` | Switch AI provider |
-| `!model` | `!model llama3-70b` | Change AI model |
+| `/settings` | `/settings view` | View current configuration |
+| `/stats` | `/stats` | Show usage statistics |
+| `/admin` | `/admin` | Admin dashboard |
+
+#### Forum Commands
+
+| Command | Usage | Description |
+|---------|-------|-------------|
+| `/forum setup` | `/forum setup channel:#support auto_respond:True` | Configure forum monitoring |
+| `/forum status` | `/forum status channel:#support` | View forum configuration |
+| `/forum enable` | `/forum enable channel:#support` | Enable forum monitoring |
+| `/forum disable` | `/forum disable channel:#support` | Disable forum monitoring |
+| `/forum list` | `/forum list` | List all configured forums |
 
 ### Slash Commands
 
-Modern Discord slash commands are also supported:
+All commands are implemented as Discord slash commands:
 
-- `/ask <question>` - Ask the AI
-- `/ticket create <issue>` - Create ticket
-- `/ticket view` - View your tickets
-- `/kb search <query>` - Search knowledge base
-- `/admin stats` - View statistics (admin only)
+- `/ask question:<text>` - Ask the AI using knowledge base
+- `/knowledge action:search query:<text>` - Search knowledge base
+- `/knowledge action:add title_or_id:<title>` - Add knowledge document
+- `/knowledge action:list` - List knowledge documents
+- `/knowledge_upload file:<attachment>` - Upload file to knowledge base
+- `/forum setup channel:<forum> [options...]` - Configure forum monitoring
+- `/forum status channel:<forum>` - View forum configuration
+- `/settings view` - View bot settings
+- `/stats` - View usage statistics
+- `/research query:<text>` - Start research task
+- `/ping` - Check bot latency
 
 ---
 
@@ -572,7 +610,7 @@ pre-commit install
 pytest
 
 # 5. Start development server
-python -m bot --dev
+python -m bot
 ```
 
 ### How to Contribute
