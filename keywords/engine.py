@@ -1,5 +1,6 @@
 """Multi-keyword matching engine for Discord support bot."""
 
+import asyncio
 import re
 import discord
 from dataclasses import dataclass, field
@@ -195,8 +196,6 @@ class KeywordEngine:
         # Classify intent if enabled
         intent_result = None
         if include_intent:
-            import asyncio
-
             intent_result = asyncio.run(self.intent_classifier.classify(message))
 
         # Group by category
@@ -332,9 +331,7 @@ class KeywordEngine:
         embeds = []
 
         # Sort categories by priority
-        sorted_categories = self.category_manager.sort_by_priority(
-            list(matches_by_category.keys())
-        )
+        sorted_categories = self.category_manager.sort_by_priority(list(matches_by_category.keys()))
 
         for category in sorted_categories:
             matches = matches_by_category[category]
@@ -365,10 +362,7 @@ class KeywordEngine:
                 embeds.append(embed)
 
                 # Limit embeds per category to prevent spam
-                if (
-                    len([e for e in embeds if e.color == config.color])
-                    > config.max_embeds
-                ):
+                if len([e for e in embeds if e.color == config.color]) > config.max_embeds:
                     overflow_embed = discord.Embed(
                         description=f"*... and {len(matches) - config.max_embeds} more matches*",
                         color=config.color,
@@ -390,16 +384,13 @@ class KeywordEngine:
         """Get engine statistics."""
         stats = {
             "total_keywords": (
-                len(self._exact_keywords)
-                + len(self._regex_patterns)
-                + len(self._fuzzy_keywords)
+                len(self._exact_keywords) + len(self._regex_patterns) + len(self._fuzzy_keywords)
             ),
             "exact_keywords": len(self._exact_keywords),
             "regex_patterns": len(self._regex_patterns),
             "fuzzy_keywords": len(self._fuzzy_keywords),
             "categories": {
-                cat.value: len(matches)
-                for cat, matches in self._category_keywords.items()
+                cat.value: len(matches) for cat, matches in self._category_keywords.items()
             },
         }
 

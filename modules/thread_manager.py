@@ -8,6 +8,9 @@ import os
 from datetime import datetime, timezone, timedelta
 from discord import Embed, ButtonStyle
 from discord.ui import View, Button
+
+# Absolute imports from same modules package (could use relative imports,
+# but absolute imports are preferred for clarity and maintainability)
 from modules import prompts, fix_store, ai_client
 import bot_state
 import bot_history

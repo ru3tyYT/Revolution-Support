@@ -12,6 +12,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+# Absolute imports from research package (top-level project package)
 from research.worker import get_task_result, revoke_task, get_queue_status
 from research.tasks import (
     web_search,
@@ -551,9 +552,7 @@ class ResearchCog(commands.Cog):
 
             # Show user's active tasks
             user_tasks = [
-                t
-                for t in self.active_tasks.values()
-                if t.get("user_id") == interaction.user.id
+                t for t in self.active_tasks.values() if t.get("user_id") == interaction.user.id
             ]
 
             if user_tasks:
