@@ -1,6 +1,6 @@
 # Research Subagents
 
-Research Subagents provide advanced research capabilities, including web search, document analysis, comparison tasks, and diagnostic assistance powered by AI.
+Research Subagents provide research capabilities including web search, document analysis, comparison tasks, and diagnostic assistance powered by AI.
 
 ## Table of Contents
 
@@ -14,9 +14,9 @@ Research Subagents provide advanced research capabilities, including web search,
 
 ## Overview
 
-Research Subagents are autonomous AI agents that:
+Research Subagents are AI agents that:
 
-1. **Search the Web**: Find relevant information from multiple sources
+1. **Search the Web**: Find relevant information from web sources
 2. **Analyze Documents**: Extract insights from text and data
 3. **Compare Options**: Evaluate alternatives based on criteria
 4. **Diagnose Issues**: Provide troubleshooting guidance
@@ -32,18 +32,17 @@ Research Subagents are autonomous AI agents that:
 
 ## Features
 
-### Multi-Source Search
+### Web Search
 
-Search across multiple platforms simultaneously:
+Basic web search integration supporting multiple providers:
 
 | Source | Type | Description |
 |--------|------|-------------|
-| Google | Web | General web search |
-| Stack Overflow | Technical | Programming Q&A |
-| GitHub | Code | Repositories and issues |
-| Documentation | Technical | Official docs |
-| Reddit | Community | Discussion forums |
-| News | Current | Latest articles |
+| DuckDuckGo | Web | Default search provider (no API key required) |
+| Google | Web | Google Custom Search API (optional) |
+| Bing | Web | Bing Search API (optional) |
+
+**Note:** The system performs web searches through a single provider at a time, not multiple simultaneous sources.
 
 ### Intelligent Analysis
 
@@ -52,20 +51,6 @@ Search across multiple platforms simultaneously:
 - **Sentiment Analysis**: Determine tone and sentiment
 - **Entity Extraction**: Identify people, places, technologies
 - **Keyword Extraction**: Find important terms
-
-### Parallel Processing
-
-Research tasks run in parallel for speed:
-
-```python
-# Execute multiple searches concurrently
-results = await asyncio.gather(
-    search_google(query),
-    search_stackoverflow(query),
-    search_github(query),
-    search_documentation(query)
-)
-```
 
 ## Architecture
 
@@ -77,41 +62,32 @@ results = await asyncio.gather(
 └─────────────────────┬───────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────────┐
-│                 Task Decomposition                      │
-│  (Break complex queries into sub-tasks)                 │
+│                 Task Queue (Celery)                     │
+│  Queue research tasks for async processing              │
 └─────────────────────┬───────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────────┐
-│              Parallel Research Workers                  │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │ Web     │ │ Code    │ │ Docs    │ │ Social  │       │
-│  │ Search  │ │ Search  │ │ Search  │ │ Search  │       │
-│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │
-└───────┼───────────┼───────────┼───────────┼────────────┘
-        ↓           ↓           ↓           ↓
-┌─────────────────────────────────────────────────────────┐
-│              Results Aggregation                        │
-│  (Combine, deduplicate, rank results)                   │
+│              Research Worker                            │
+│  Process tasks: web search, comparison, diagnosis       │
 └─────────────────────┬───────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────────┐
-│              Analysis & Synthesis                       │
-│  (Extract insights, create summary)                     │
+│              Results Processing                         │
+│  (Rank, analyze, and format results)                    │
 └─────────────────────┬───────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────────┐
-│              Final Report Generation                    │
+│              Response Generation                        │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ### Research Worker System
 
-Research tasks are processed by Celery workers:
+Research tasks are processed by Celery workers with Redis backend:
 
 ```python
 # Celery configuration
-CELERY_BROKER_URL=redis://localhost:6379/1
-CELERY_RESULT_BACKEND=redis://localhost:6379/2
+REDIS_URL=redis://localhost:6379/0
 
 # Worker startup
 celery -A research.tasks worker --loglevel=info --concurrency=4
@@ -120,13 +96,13 @@ celery -A research.tasks worker --loglevel=info --concurrency=4
 ### Task Queue
 
 ```python
-from research.tasks import research_task
+from research.tasks import web_search, comparison, troubleshooting
 
-# Queue research task
-task = research_task.delay(
+# Queue web search task
+task = web_search.delay(
     query="Python async best practices",
-    depth="detailed",
-    user_id="123456"
+    provider="auto",
+    max_results=10
 )
 
 # Check status
@@ -143,46 +119,29 @@ result = task.get(timeout=300)  # Wait up to 5 minutes
 ```bash
 # Research Settings
 ENABLE_RESEARCH=true
-RESEARCH_MAX_DEPTH=3
 RESEARCH_TIMEOUT_SECONDS=300
 RESEARCH_RESULTS_LIMIT=20
 
-# Search APIs
-SERPAPI_KEY=your_serpapi_key      # Google Search
-STACKEXCHANGE_KEY=your_key        # Stack Overflow
-GITHUB_TOKEN=ghp_...              # GitHub API
-REDDIT_CLIENT_ID=...              # Reddit API
-REDDIT_CLIENT_SECRET=...
+# Search APIs (optional - DuckDuckGo works without API keys)
+GOOGLE_SEARCH_API_KEY=your_google_api_key
+GOOGLE_SEARCH_CX=your_custom_search_engine_id
+BING_SEARCH_API_KEY=your_bing_api_key
 
 # Analysis Settings
 RESEARCH_ANALYZE_SENTIMENT=true
 RESEARCH_EXTRACT_KEYWORDS=true
 RESEARCH_SUMMARIZE_RESULTS=true
-RESEARCH_RANK_BY_RELEVANCE=true
 ```
+
+**Note:** Stack Overflow API, GitHub API, and Reddit API integrations are not currently implemented. The system uses web search only.
 
 ### Rate Limiting
 
-Configure API rate limits:
+Basic rate limiting is configured for research tasks:
 
 ```python
-RESEARCH_RATE_LIMITS = {
-    "serpapi": {"requests": 100, "window": 86400},     # 100/day
-    "github": {"requests": 5000, "window": 3600},       # 5000/hour
-    "stackoverflow": {"requests": 300, "window": 86400} # 300/day
-}
-```
-
-### Worker Scaling
-
-Scale workers based on demand:
-
-```bash
-# Docker Compose - scale workers
-docker-compose up -d --scale research-worker=4
-
-# Kubernetes - auto-scale
-kubectl autoscale deployment research-worker --min=2 --max=10 --cpu-percent=70
+# Web search: 10 per minute
+# API queries: 30 per minute
 ```
 
 ## Usage
@@ -191,29 +150,23 @@ kubectl autoscale deployment research-worker --min=2 --max=10 --cpu-percent=70
 
 ```bash
 # Simple web search with analysis
-/research search query:"Python asyncio best practices"
+/research query:"Python asyncio best practices"
 
-# Detailed research
-/research search query:"React vs Vue 2024" depth:comprehensive
+# Search with specific provider
+/research query:"React vs Vue 2024"
 ```
 
-### Research Depth Levels
-
-| Level | Duration | Sources | Description |
-|-------|----------|---------|-------------|
-| Basic | 10-30s | 3-5 | Quick overview |
-| Detailed | 30-60s | 5-10 | Thorough research |
-| Comprehensive | 1-3m | 10-20 | Deep analysis |
+**Note:** The `depth` parameter (basic/detailed/comprehensive) is not currently implemented.
 
 ### Comparison Research
 
 ```bash
 # Compare multiple options
-/research compare items:"Docker,Kubernetes,Podman" criteria:"ease-of-use,performance,cost"
+/research_compare items:"Docker,Kubernetes,Podman" criteria:"ease-of-use,performance,cost"
 
 # Response includes:
 # - Side-by-side comparison table
-# - Pros/cons for each option
+# - Scores for each option
 # - Recommendation based on criteria
 ```
 
@@ -239,8 +192,20 @@ kubectl autoscale deployment research-worker --min=2 --max=10 --cpu-percent=70
 # Response includes:
 # - Severity assessment
 # - Step-by-step troubleshooting
-# - Estimated resolution time
-# - Escalation recommendations
+# - Similar issues from knowledge base
+```
+
+### Task Management
+
+```bash
+# Check task status
+/research_status task_id:<task_id>
+
+# View task queue
+/research_queue
+
+# Cancel a task
+/research_cancel task_id:<task_id>
 ```
 
 ## Research Types
@@ -250,13 +215,13 @@ kubectl autoscale deployment research-worker --min=2 --max=10 --cpu-percent=70
 Search and analyze web content:
 
 ```python
-from research.web_search import WebSearch
+from research.web_search import WebSearchProvider
 
-searcher = WebSearch()
-results = await searcher.search(
+searcher = WebSearchProvider()
+results = searcher.search(
     query="Discord.py tutorial",
-    sources=["google", "stackoverflow", "github"],
-    limit=10
+    provider="auto",  # auto, google, bing, duckduckgo
+    max_results=10
 )
 
 # Results include:
@@ -264,28 +229,6 @@ results = await searcher.search(
 # - Snippet/summary
 # - Source platform
 # - Relevance score
-# - Publication date
-```
-
-### Code Research
-
-Find code examples and solutions:
-
-```python
-from research.code_search import CodeSearch
-
-searcher = CodeSearch()
-results = await searcher.search(
-    query="async context manager python",
-    languages=["python"],
-    min_stars=100
-)
-
-# Results include:
-# - Code snippets
-# - Repository info
-# - Usage examples
-# - Documentation links
 ```
 
 ### Document Analysis
@@ -293,24 +236,15 @@ results = await searcher.search(
 Analyze uploaded or linked documents:
 
 ```python
-from research.analyzer import ResearchAnalyzer
+from research.tasks import document_analysis
 
-analyzer = ResearchAnalyzer()
-
-# Summarize content
-summary = analyzer.summarize(
-    content=long_document,
-    max_length=500
+# Queue document analysis
+task = document_analysis.delay(
+    document_url="https://example.com/article",
+    analysis_type="summary"  # summary, sentiment, entities, keywords
 )
 
-# Extract sentiment
-sentiment = analyzer.analyze_sentiment(content)
-
-# Extract keywords
-keywords = analyzer.extract_keywords(content, top_n=10)
-
-# Extract entities
-entities = analyzer.extract_entities(content)
+result = task.get()
 ```
 
 ### Comparison Analysis
@@ -318,24 +252,21 @@ entities = analyzer.extract_entities(content)
 Compare items based on criteria:
 
 ```python
+from research.tasks import comparison
+
 # Define comparison
-comparison = {
-    "items": ["Docker", "Kubernetes", "Podman"],
-    "criteria": ["ease_of_use", "scalability", "learning_curve"],
-    "context": "For a small team deploying web applications"
-}
+items = [
+    {"name": "Docker", "attributes": {...}},
+    {"name": "Kubernetes", "attributes": {...}},
+    {"name": "Podman", "attributes": {...}}
+]
+criteria = ["ease_of_use", "scalability", "learning_curve"]
 
-# Score each item
-scores = {}
-for item in comparison["items"]:
-    scores[item] = {}
-    for criterion in comparison["criteria"]:
-        scores[item][criterion] = analyzer.score_criterion(
-            item, criterion, comparison["context"]
-        )
+# Queue comparison
+task = comparison.delay(items=items, criteria=criteria, context="For a small team")
+result = task.get()
 
-# Generate recommendation
-recommendation = generate_recommendation(scores)
+# Returns rankings with scores and recommendation
 ```
 
 ### Diagnostic Research
@@ -343,25 +274,40 @@ recommendation = generate_recommendation(scores)
 Diagnose problems with guided troubleshooting:
 
 ```python
-from research.analyzer import ResearchAnalyzer
+from research.tasks import troubleshooting
 
-analyzer = ResearchAnalyzer()
-
-diagnosis = analyzer.diagnose_issue(
+# Queue troubleshooting task
+task = troubleshooting.delay(
     problem="Database connection timeout",
     symptoms=["slow queries", "intermittent failures"],
-    context={
-        "database": "PostgreSQL 14",
-        "application": "Django 4.2",
-        "traffic": "1000 req/min"
-    }
+    context={"database": "PostgreSQL 14", "application": "Django 4.2"},
+    category="technical"
 )
+
+result = task.get()
 
 # Returns:
 # - severity: "high"
-# - steps: [step-by-step guide]
-# - eta: "30-60 minutes"
-# - recommendations: [action items]
+# - diagnosis: analysis results
+# - troubleshooting_steps: [step-by-step guide]
+# - similar_issues: [related knowledge base entries]
+```
+
+### Database Lookup
+
+Query internal databases for research:
+
+```python
+from research.tasks import database_lookup
+
+# Queue database query
+task = database_lookup.delay(
+    query_type="tickets",  # tickets, users, knowledge, analytics
+    filters={"status": "open", "date_from": "2024-01-01"},
+    limit=100
+)
+
+result = task.get()
 ```
 
 ## Best Practices
@@ -375,15 +321,15 @@ diagnosis = analyzer.diagnose_issue(
 
 ### Cost Management
 
-1. **Use Appropriate Depth**: Don't use comprehensive for simple questions
-2. **Cache Results**: Enable research caching
-3. **Limit Sources**: Only search necessary platforms
-4. **Monitor Usage**: Track API costs regularly
+1. **Use Appropriate Provider**: DuckDuckGo requires no API key
+2. **Limit Results**: Use `max_results` parameter
+3. **Monitor Usage**: Track API costs regularly
+4. **Cache Results**: Results expire after 1 hour by default
 
 ### Quality Assurance
 
 1. **Verify Sources**: Check result credibility
-2. **Cross-Reference**: Confirm with multiple sources
+2. **Cross-Reference**: Confirm with multiple queries
 3. **Update Regularly**: Information becomes outdated
 4. **Human Review**: Validate critical research
 
@@ -412,7 +358,7 @@ diagnosis = analyzer.diagnose_issue(
 "Should we use Redis or Memcached?"
 
 # 2. Run comparison research
-/research compare items:"Redis,Memcached" criteria:"performance,features,cost"
+/research_compare items:"Redis,Memcached" criteria:"performance,features,cost"
 
 # 3. Present findings with recommendation
 # Bot provides detailed comparison
@@ -425,10 +371,10 @@ diagnosis = analyzer.diagnose_issue(
 
 ```bash
 # 1. Add to knowledge base
-/research search query:"API rate limiting best practices" depth:comprehensive
+/research query:"API rate limiting best practices"
 
 # 2. Review and summarize findings
-# Bot compiles information from multiple sources
+# Bot compiles information from web search
 
 # 3. Create knowledge base document
 /knowledge add title:"Rate Limiting Guide" content:"[compiled research]"
@@ -442,26 +388,24 @@ diagnosis = analyzer.diagnose_issue(
 ### Research Taking Too Long
 
 **Solutions:**
-1. Reduce research depth
-2. Limit number of sources
-3. Check worker status
-4. Review rate limits
+1. Reduce number of results requested
+2. Check worker status
+3. Cancel and retry task
 
 ```bash
-# Check worker status
-celery -A research.tasks inspect active
+# Check task status
+/research_status task_id:<task_id>
 
-# Clear stuck tasks
-celery -A research.tasks purge
+# Cancel stuck task
+/research_cancel task_id:<task_id>
 ```
 
 ### No Results Found
 
 **Check:**
-1. API keys are valid
-2. Rate limits not exceeded
-3. Query is clear and specific
-4. Sources are appropriate
+1. API keys are valid (if using Google/Bing)
+2. Query is clear and specific
+3. Try different keywords
 
 ### Poor Quality Results
 
@@ -469,21 +413,15 @@ celery -A research.tasks purge
 1. Add more context to query
 2. Try different keywords
 3. Include specific technologies
-4. Use comprehensive depth
 
-### High API Costs
+### Web Search Unavailable
 
-**Cost Reduction:**
-1. Enable result caching
-2. Use local analysis where possible
-3. Limit searches per user
-4. Use cheaper search APIs
+If search fails, the system will return a fallback message. To enable search:
 
-```python
-# Enable caching
-RESEARCH_CACHE_ENABLED=true
-RESEARCH_CACHE_TTL=7200  # 2 hours
+1. For DuckDuckGo: Install `duckduckgo-search` library
+2. For Google: Set `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_CX`
+3. For Bing: Set `BING_SEARCH_API_KEY`
 
-# Limit per user
-USER_RESEARCH_LIMIT_HOURLY=10
+```bash
+pip install duckduckgo-search
 ```
