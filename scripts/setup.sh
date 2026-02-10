@@ -281,9 +281,11 @@ configure_ai_provider() {
             log_prompt "Enter your Ollama base URL (default: http://localhost:11434):"
             read -r OLLAMA_URL
             OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
-            sed -i.bak "s|^OLLAMA_CLOUD_BASE_URL=.*|OLLAMA_CLOUD_BASE_URL=$OLLAMA_URL|" "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+            sed -i.bak "s|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=$OLLAMA_URL|" "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+            sed -i.bak "s|^OLLAMA_MODEL=.*|OLLAMA_MODEL=llama3.2|" "$ENV_FILE" && rm -f "$ENV_FILE.bak"
             sed -i.bak "s|^DEFAULT_MODEL=.*|DEFAULT_MODEL=llama3.2|" "$ENV_FILE" && rm -f "$ENV_FILE.bak"
             log_warning "Make sure Ollama is running locally!"
+            log_info "For Ollama Cloud, set OLLAMA_CLOUD_KEY and OLLAMA_CLOUD_BASE_URL in .env"
             log_success "Ollama configured"
             ;;
         *)

@@ -119,19 +119,21 @@ GROQ_BASE_URL=https://api.groq.com/openai/v1
 
 ### Ollama (Local/Cloud)
 
-**Models:** Llama 3.2, Llama 3.1, Mistral, Gemma, and more
+**Models (Local):** Llama 3.2, Llama 3.1, Mistral, Gemma, and more
+
+**Models (Cloud):** Kimi K2.5, Gemini 2.0 Flash/Pro
 
 **Configuration (Local):**
 ```bash
-OLLAMA_CLOUD_KEY=  # Leave empty for local
-OLLAMA_CLOUD_BASE_URL=http://localhost:11434
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
 ```
 
 **Configuration (Cloud):**
 ```bash
 OLLAMA_CLOUD_KEY=your_key
-OLLAMA_CLOUD_BASE_URL=https://api.ollama.com/v1
-OLLAMA_CLOUD_MODEL=llama3.2
+OLLAMA_CLOUD_BASE_URL=https://api.ollama.ai/v1
+OLLAMA_CLOUD_MODEL=kimi-k2.5
 ```
 
 **Features:**
@@ -173,8 +175,11 @@ OPENROUTER_API_KEY=sk-or-your-key
 GROQ_API_KEY=gsk-your-key
 
 # Ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
 OLLAMA_CLOUD_KEY=your-key
-OLLAMA_CLOUD_BASE_URL=http://localhost:11434
+OLLAMA_CLOUD_BASE_URL=https://api.ollama.ai/v1
+OLLAMA_CLOUD_MODEL=kimi-k2.5
 ```
 
 ### Provider Priority

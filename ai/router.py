@@ -136,9 +136,7 @@ class AIRouter:
         )
         logger.info(f"Registered provider: {name}")
 
-    def register_openai(
-        self, api_key: str, organization: Optional[str] = None, priority: int = 5
-    ):
+    def register_openai(self, api_key: str, organization: Optional[str] = None, priority: int = 5):
         """Register OpenAI provider"""
         provider = OpenAIProvider(api_key=api_key, organization=organization)
         self.register_provider("openai", provider, priority=priority)
@@ -161,17 +159,21 @@ class AIRouter:
     def register_ollama(
         self,
         api_key: Optional[str] = None,
-        api_base: str = "http://localhost:11434",
+        api_base: Optional[str] = None,
         use_cloud: bool = False,
         cloud_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
         priority: int = 9,  # Highest for free cloud
     ):
         """Register Ollama provider"""
+        if api_base is None:
+            api_base = "https://api.ollama.ai/v1" if use_cloud else "http://localhost:11434"
         provider = OllamaProvider(
             api_key=api_key,
             api_base=api_base,
             use_cloud=use_cloud,
             cloud_api_key=cloud_api_key,
+            default_model=default_model,
         )
         self.register_provider("ollama", provider, priority=priority)
 
@@ -183,9 +185,7 @@ class AIRouter:
         priority: int = 6,
     ):
         """Register OpenRouter provider"""
-        provider = OpenRouterProvider(
-            api_key=api_key, http_referer=http_referer, x_title=x_title
-        )
+        provider = OpenRouterProvider(api_key=api_key, http_referer=http_referer, x_title=x_title)
         self.register_provider("openrouter", provider, priority=priority)
 
     async def route(
@@ -236,9 +236,7 @@ class AIRouter:
                     continue
 
                 # Calculate score
-                score = self._calculate_score(
-                    model, provider_info, strategy, preferred_providers
-                )
+                score = self._calculate_score(model, provider_info, strategy, preferred_providers)
 
                 candidates.append(
                     {
@@ -305,9 +303,7 @@ class AIRouter:
             else:
                 # Lower cost = higher score
                 max_cost = 0.01  # $0.01 per 1K tokens
-                cost_score = max(
-                    0, (max_cost - model.cost_per_input_token) / max_cost * 50
-                )
+                cost_score = max(0, (max_cost - model.cost_per_input_token) / max_cost * 50)
                 score += cost_score
 
         elif strategy == RoutingStrategy.QUALITY_PRIORITY:
@@ -347,9 +343,7 @@ class AIRouter:
                 score += 30
             else:
                 max_cost = 0.01
-                cost_score = max(
-                    0, (max_cost - model.cost_per_input_token) / max_cost * 30
-                )
+                cost_score = max(0, (max_cost - model.cost_per_input_token) / max_cost * 30)
                 score += cost_score
 
             # Speed (20%)
@@ -427,9 +421,9 @@ class AIRouter:
 
                 # Rotate API key if multiple keys available
                 if len(provider_info.api_keys) > 1:
-                    provider_info.current_key_index = (
-                        provider_info.current_key_index + 1
-                    ) % len(provider_info.api_keys)
+                    provider_info.current_key_index = (provider_info.current_key_index + 1) % len(
+                        provider_info.api_keys
+                    )
                     provider_info.provider.api_key = provider_info.api_keys[
                         provider_info.current_key_index
                     ]
@@ -474,27 +468,21 @@ class AIRouter:
                 attempts += 1
 
                 if attempts < self.max_fallback_attempts:
-                    logger.info(
-                        f"Falling back to alternative provider (attempt {attempts + 1})"
-                    )
+                    logger.info(f"Falling back to alternative provider (attempt {attempts + 1})")
                     try:
                         decision = await self.route(
                             request,
                             strategy,
                             excluded_providers=excluded,
                             **{
-                                k: v
-                                for k, v in routing_kwargs.items()
-                                if k != "excluded_providers"
+                                k: v for k, v in routing_kwargs.items() if k != "excluded_providers"
                             },
                         )
                     except Exception:
                         # No more providers available
                         break
 
-        raise Exception(
-            f"All providers failed after {attempts} attempts. Last error: {last_error}"
-        )
+        raise Exception(f"All providers failed after {attempts} attempts. Last error: {last_error}")
 
     async def get_provider_health(self) -> Dict[str, Any]:
         """Get health status of all providers"""
@@ -502,9 +490,7 @@ class AIRouter:
 
         for name, info in self.providers.items():
             total_requests = info.success_count + info.error_count
-            success_rate = (
-                info.success_count / total_requests * 100 if total_requests > 0 else 100
-            )
+            success_rate = info.success_count / total_requests * 100 if total_requests > 0 else 100
 
             health[name] = {
                 "status": info.provider.status.value,

@@ -92,9 +92,25 @@ class SupportBot(commands.AutoShardedBot):
             self.ai_router.register_openrouter(openrouter_key)
             providers_registered.append("openrouter")
 
+        ollama_cloud_key = os.getenv("OLLAMA_CLOUD_KEY")
+        ollama_cloud_base_url = os.getenv("OLLAMA_CLOUD_BASE_URL")
+        ollama_cloud_model = os.getenv("OLLAMA_CLOUD_MODEL")
         ollama_base_url = os.getenv("OLLAMA_BASE_URL")
-        if ollama_base_url:
-            self.ai_router.register_ollama(api_base=ollama_base_url)
+        ollama_default_model = os.getenv("OLLAMA_MODEL")
+
+        if ollama_cloud_key or ollama_cloud_base_url:
+            self.ai_router.register_ollama(
+                use_cloud=True,
+                cloud_api_key=ollama_cloud_key,
+                api_base=ollama_cloud_base_url,
+                default_model=ollama_cloud_model or ollama_default_model,
+            )
+            providers_registered.append("ollama")
+        elif ollama_base_url or ollama_default_model:
+            self.ai_router.register_ollama(
+                api_base=ollama_base_url,
+                default_model=ollama_default_model,
+            )
             providers_registered.append("ollama")
 
         if providers_registered:

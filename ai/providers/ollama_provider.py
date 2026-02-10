@@ -192,6 +192,7 @@ class OllamaProvider(BaseAIProvider):
         api_base: str = "http://localhost:11434",
         use_cloud: bool = False,
         cloud_api_key: Optional[str] = None,
+        default_model: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -204,10 +205,11 @@ class OllamaProvider(BaseAIProvider):
             cloud_api_key: API key for Ollama Cloud
         """
         self.use_cloud = use_cloud
+        self.default_model = default_model
 
         if use_cloud:
             # Ollama Cloud uses different endpoint and requires API key
-            api_base = "https://api.ollama.ai/v1"
+            api_base = api_base or "https://api.ollama.ai/v1"
             api_key = cloud_api_key
             rate_limit_requests = 30  # Free tier
             rate_limit_tokens = 100000
@@ -258,19 +260,17 @@ class OllamaProvider(BaseAIProvider):
                 formatted.append({"role": msg.role, "content": msg.content})
             elif msg.role == "tool":
                 # Map tool to user for Ollama
-                formatted.append(
-                    {"role": "user", "content": f"Tool result: {msg.content}"}
-                )
+                formatted.append({"role": "user", "content": f"Tool result: {msg.content}"})
         return formatted
 
-    async def _make_request(
-        self, request: ChatCompletionRequest
-    ) -> ChatCompletionResponse:
+    async def _make_request(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         """Make request to Ollama API"""
         session = await self._get_session()
 
         # Get default model based on mode
-        if self.use_cloud:
+        if self.default_model:
+            default_model = self.default_model
+        elif self.use_cloud:
             default_model = "kimi-k2.5"
         else:
             default_model = "llama3.2"
@@ -342,13 +342,13 @@ class OllamaProvider(BaseAIProvider):
                 tool_calls=None,
             )
 
-    async def _stream_request(
-        self, request: ChatCompletionRequest
-    ) -> AsyncGenerator[str, None]:
+    async def _stream_request(self, request: ChatCompletionRequest) -> AsyncGenerator[str, None]:
         """Make streaming request to Ollama API"""
         session = await self._get_session()
 
-        if self.use_cloud:
+        if self.default_model:
+            default_model = self.default_model
+        elif self.use_cloud:
             default_model = "kimi-k2.5"
         else:
             default_model = "llama3.2"

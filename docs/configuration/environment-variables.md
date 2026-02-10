@@ -160,20 +160,21 @@ GROQ_BASE_URL=https://api.groq.com/openai/v1
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OLLAMA_CLOUD_KEY` | - | Cloud API key (optional) |
-| `OLLAMA_CLOUD_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_CLOUD_MODEL` | `llama3.2` | Default model |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama server URL |
+| `OLLAMA_MODEL` | `llama3.2` | Default local model |
+| `OLLAMA_CLOUD_KEY` | - | Ollama Cloud API key (optional) |
+| `OLLAMA_CLOUD_BASE_URL` | `https://api.ollama.ai/v1` | Ollama Cloud base URL |
+| `OLLAMA_CLOUD_MODEL` | `kimi-k2.5` | Default cloud model |
 
 ```bash
 # Local Ollama
-OLLAMA_CLOUD_KEY=
-OLLAMA_CLOUD_BASE_URL=http://localhost:11434
-OLLAMA_CLOUD_MODEL=llama3.2
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
 
 # Ollama Cloud
 OLLAMA_CLOUD_KEY=your_cloud_key
-OLLAMA_CLOUD_BASE_URL=https://api.ollama.com/v1
-OLLAMA_CLOUD_MODEL=llama3.2
+OLLAMA_CLOUD_BASE_URL=https://api.ollama.ai/v1
+OLLAMA_CLOUD_MODEL=kimi-k2.5
 ```
 
 ## Cost Optimization
