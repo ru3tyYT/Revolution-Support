@@ -1,6 +1,6 @@
 # Knowledge Base
 
-The Knowledge Base feature provides Retrieval-Augmented Generation (RAG) capabilities, allowing the bot to answer questions based on uploaded documents and previous support interactions.
+The Knowledge Base feature provides Retrieval-Augmented Generation (RAG) capabilities, allowing the bot to answer questions based on uploaded documents.
 
 ## Table of Contents
 
@@ -17,10 +17,9 @@ The Knowledge Base feature provides Retrieval-Augmented Generation (RAG) capabil
 The Knowledge Base enables:
 
 1. **Document Storage**: Upload and store documentation
-2. **Semantic Search**: Find relevant information using embeddings
+2. **Vector Search**: Find relevant information using embeddings
 3. **Context Injection**: Provide relevant context to AI responses
 4. **Multi-Modal Support**: Text, PDF, Markdown, and more
-5. **Version Control**: Track document changes
 
 ### Benefits
 
@@ -55,11 +54,9 @@ AI Response with Context
 
 #### 1. Document Ingestion
 
-Upload documents via:
-- Discord file upload (`/knowledge_upload`)
-- Text input (`/knowledge add`)
-- API endpoint
-- Bulk import
+Upload documents via Discord commands:
+- `/knowledge_upload` - Upload a file
+- `/knowledge add` - Add text directly
 
 #### 2. Text Extraction
 
@@ -93,12 +90,11 @@ chunk_config = ChunkConfig(
 |----------|----------|
 | Fixed Size | General documents |
 | Paragraph | Articles, guides |
-| Semantic | Technical docs |
 | Recursive | Complex structures |
 
 #### 4. Embedding Generation
 
-Convert chunks to vector embeddings:
+Convert chunks to vector embeddings using OpenAI:
 
 ```python
 # Using OpenAI embeddings
@@ -111,15 +107,6 @@ embeddings = await embedding_generator.generate_batch(
     model=embedding_model
 )
 ```
-
-**Supported Embedding Providers:**
-
-| Provider | Model | Dimension | Cost |
-|----------|-------|-----------|------|
-| OpenAI | text-embedding-3-small | 1536 | $0.02/1M tokens |
-| OpenAI | text-embedding-3-large | 3072 | $0.13/1M tokens |
-| OpenAI | text-embedding-ada-002 | 1536 | $0.10/1M tokens |
-| Local | sentence-transformers | 768-1024 | Free |
 
 #### 5. Vector Storage
 
@@ -142,7 +129,7 @@ USING ivfflat (embedding vector_cosine_ops);
 
 #### 6. Retrieval
 
-Search for relevant chunks:
+Search for relevant chunks using vector similarity:
 
 ```python
 # Generate query embedding
@@ -159,8 +146,6 @@ results = db.query(KnowledgeChunk).order_by(
 | Metric | Use Case | Range |
 |--------|----------|-------|
 | Cosine Similarity | General semantic search | -1 to 1 |
-| Euclidean Distance | Exact matching | 0 to ∞ |
-| Dot Product | Fast approximate search | -∞ to ∞ |
 
 ## Document Management
 
@@ -187,15 +172,6 @@ results = db.query(KnowledgeChunk).order_by(
 | .docx | 10 MB | Word documents |
 | .py, .js, etc. | 1 MB | Code files |
 
-#### Via API
-
-```bash
-curl -X POST http://api.example.com/knowledge/upload \
-  -H "Authorization: Bearer $API_TOKEN" \
-  -F "file=@documentation.pdf" \
-  -F "title=Product Documentation"
-```
-
 ### Document Metadata
 
 Each document stores:
@@ -205,7 +181,7 @@ class KnowledgeDoc:
     id: UUID
     guild_id: int           # Discord server
     title: str              # Document title
-    content: str            # Full text (optional)
+    content: str            # Full text
     doc_type: str           # File type
     created_by: int         # User ID
     created_at: datetime
@@ -215,26 +191,11 @@ class KnowledgeDoc:
     chunk_count: int        # Number of chunks
 ```
 
-### Document Versioning
-
-Track document changes:
-
-```bash
-# Update document creates new version
-/knowledge edit document_id:abc-123 content:"Updated content"
-
-# View version history
-/knowledge history document_id:abc-123
-
-# Restore previous version
-/knowledge restore document_id:abc-123 version:2
-```
-
 ## Search Capabilities
 
 ### Vector Search
 
-Semantic similarity search:
+Semantic similarity search using pgvector:
 
 ```bash
 # Search knowledge base
@@ -246,39 +207,6 @@ Semantic similarity search:
    
 2. Account Management (87% match)
    > Managing your account settings...
-```
-
-### Hybrid Search
-
-Combine keyword and vector search:
-
-```python
-# Keyword search (fast, exact)
-keyword_results = keyword_search(query)
-
-# Vector search (semantic, fuzzy)
-vector_results = vector_search(query_embedding)
-
-# Combine and rerank
-final_results = reciprocal_rank_fusion(
-    keyword_results, 
-    vector_results
-)
-```
-
-### Search Filters
-
-Filter search results:
-
-```bash
-# Search by document type
-/knowledge search query:"API" type:technical
-
-# Search by date
-/knowledge search query:"billing" after:2024-01-01
-
-# Search by author
-/knowledge search query:"feature" author:@admin
 ```
 
 ### Context Assembly
@@ -306,67 +234,67 @@ response = await ai.complete(
 
 ## Configuration
 
-### Environment Variables
+Configuration is managed in `config/config.yaml`:
 
-```bash
-# Vector Database
-VECTOR_DB_TYPE=pgvector
-VECTOR_DB_URL=postgresql://postgres:pass@localhost:5432/supportbot
-VECTOR_DIMENSION=1536
-
-# Embeddings
-EMBEDDING_PROVIDER=openai
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSION=1536
-
-# RAG Settings
-RAG_TOP_K=5                    # Number of chunks to retrieve
-RAG_SIMILARITY_THRESHOLD=0.7   # Minimum similarity score
-RAG_MAX_TOKENS=2000            # Max tokens in context
-ENABLE_RAG_CACHE=true          # Cache search results
-RAG_CACHE_TTL=3600             # Cache TTL in seconds
-
-# Document Processing
-MAX_DOCUMENT_SIZE_MB=10
-SUPPORTED_DOCUMENT_TYPES=pdf,txt,md,docx
-DOCUMENT_CHUNK_SIZE=1000
-DOCUMENT_CHUNK_OVERLAP=200
+```yaml
+# Knowledge Base (RAG) Settings
+knowledge_base:
+  enabled: true
+  
+  # Vector database settings
+  vector_db:
+    provider: "pgvector"
+    dimension: 1536
+    metric: "cosine"
+    index_type: "ivfflat"
+    lists: 100
+  
+  # Embedding settings
+  embedding:
+    provider: "openai"
+    model: "text-embedding-3-small"
+    dimension: 1536
+    batch_size: 100
+  
+  # Retrieval settings
+  retrieval:
+    top_k: 5
+    similarity_threshold: 0.7
+    max_tokens: 2000
+  
+  # Document processing
+  document:
+    max_size_mb: 10
+    chunk_size: 1000
+    chunk_overlap: 200
+    supported_types:
+      - "pdf"
+      - "txt"
+      - "md"
+      - "docx"
+      - "html"
 ```
 
-### RAG Configuration
+### Database Models
 
-```python
-rag_config = RAGConfig(
-    top_k=5,                      # Retrieve top 5 chunks
-    max_context_tokens=2000,      # Limit context size
-    similarity_threshold=0.7,     # Minimum relevance
-    include_metadata=True,        # Include source info
-    rerank_results=True,          # Rerank by relevance
-    deduplicate=True              # Remove duplicate content
-)
-```
+The knowledge base uses these database models:
 
-### Caching
+**KnowledgeDoc**: Stores document metadata
+- `id`: UUID primary key
+- `guild_id`: Discord server reference
+- `title`: Document title
+- `content`: Full document text
+- `doc_type`: File type (text, markdown, pdf, etc.)
+- `chunk_count`: Number of chunks created
+- `is_active`: Soft delete flag
 
-Cache search results for performance:
-
-```python
-# Cache configuration
-RAG_CACHE_ENABLED=true
-RAG_CACHE_TTL=3600  # 1 hour
-
-# Cache key format
-cache_key = f"rag:{guild_id}:{hash(query)}"
-
-# Check cache first
-result = await redis.get(cache_key)
-if result:
-    return json.loads(result)
-
-# Search and cache
-results = await search(query)
-await redis.setex(cache_key, 3600, json.dumps(results))
-```
+**KnowledgeChunk**: Stores document chunks with embeddings
+- `id`: UUID primary key
+- `document_id`: Reference to parent document
+- `chunk_index`: Position in document
+- `content`: Chunk text content
+- `embedding`: 1536-dimensional vector
+- `model`: Embedding model used
 
 ## Usage
 
@@ -376,13 +304,12 @@ Users can query the knowledge base:
 
 ```bash
 # Ask a question
-/ask question:"How do I enable two-factor authentication?"
+/knowledge search query:"How do I enable two-factor authentication?"
 
 # Response includes:
-# - AI-generated answer
-# - Source documents
-# - Confidence score
-# - Related topics
+# - Relevant document chunks
+# - Similarity scores
+# - Source document titles
 ```
 
 ### In Forum Threads
@@ -464,7 +391,7 @@ results = search_kb("reset password")
 
 # 6. Clean up quarterly
 /knowledge list
-# Remove old versions and unused docs
+# Remove old and unused docs
 ```
 
 ## Troubleshooting
@@ -495,9 +422,8 @@ curl https://api.openai.com/v1/embeddings \
 
 **Optimization:**
 1. Add vector indexes
-2. Enable caching
-3. Reduce top_k value
-4. Filter by guild before search
+2. Reduce top_k value
+3. Filter by guild before search
 
 ```sql
 -- Create vector index
@@ -513,20 +439,12 @@ VACUUM ANALYZE knowledge_chunks;
 
 **Improvements:**
 1. Adjust similarity threshold
-2. Try different embedding model
-3. Improve chunking strategy
-4. Add more context to documents
+2. Improve chunking strategy
+3. Add more context to documents
 
 ### High Embedding Costs
 
 **Cost Reduction:**
 1. Use smaller embedding model
-2. Use local embeddings (sentence-transformers)
-3. Cache embeddings aggressively
-4. Batch embedding requests
-
-```python
-# Use local embeddings (free)
-EMBEDDING_PROVIDER=local
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-```
+2. Batch embedding requests
+3. Monitor usage with `/knowledge stats`
