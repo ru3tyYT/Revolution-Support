@@ -1,5 +1,5 @@
 # Discord Support Bot Requirements
-# Python 3.10+
+# Python 3.11+
 
 # Core Dependencies
 discord.py>=2.4.0
