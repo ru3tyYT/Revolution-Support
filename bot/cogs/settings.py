@@ -1,10 +1,13 @@
 """Settings and configuration commands cog for the Discord support bot."""
 
+from pathlib import Path
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import Literal
 
+from ..config import Config
 from ..embed_builder import (
     EmbedBuilder,
     success_embed,
@@ -19,32 +22,62 @@ class Settings(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    settings_group = app_commands.Group(
-        name="settings", description="Configure bot settings"
-    )
+    settings_group = app_commands.Group(name="settings", description="Configure bot settings")
 
     @settings_group.command(name="view", description="View current bot settings")
     @app_commands.checks.has_permissions(administrator=True)
     async def settings_view(self, interaction: discord.Interaction):
         """Display current bot settings."""
         try:
+            yaml_config: dict = {}
+            try:
+                import yaml
+
+                config_path = Path(__file__).resolve().parents[2] / "config" / "config.yaml"
+                if config_path.exists():
+                    with config_path.open("r", encoding="utf-8") as config_file:
+                        yaml_config = yaml.safe_load(config_file) or {}
+            except Exception:
+                yaml_config = {}
+
+            routing_config = yaml_config.get("routing") or {}
+            bot_config = yaml_config.get("bot") or {}
+            status_config = bot_config.get("status") or {}
+
+            default_provider = routing_config.get("default_provider") or "Not configured"
+            default_model = routing_config.get("default_model") or "Not configured"
+            status = status_config.get("status") or "Not configured"
+
             embed = info_embed("Bot Settings", "Current configuration")
 
             embed.add_field(
                 name="AI Configuration",
-                value="```\nModel: GPT-4\nProvider: OpenAI\nTemperature: 0.7\nMax Tokens: 2000\n```",
+                value=(
+                    "```\n"
+                    f"Model: {default_model}\n"
+                    f"Provider: {default_provider}\n"
+                    "Temperature: Not configured\n"
+                    "Max Tokens: Not configured\n"
+                    "```"
+                ),
                 inline=False,
             )
 
             embed.add_field(
                 name="API Settings",
-                value="```\nAuto-rotate: Enabled\nFallback: Enabled\nRate Limit: 60/min\n```",
+                value=self._format_api_settings(),
                 inline=False,
             )
 
             embed.add_field(
                 name="Bot Settings",
-                value="```\nPrefix: !\nStatus: Online\nLogging: Verbose\n```",
+                value=(
+                    "```\n"
+                    f"Prefix: {Config.COMMAND_PREFIX}\n"
+                    f"Status: {status}\n"
+                    f"Logging: {Config.LOG_LEVEL}\n"
+                    "```"
+                ),
                 inline=False,
             )
 
@@ -122,17 +155,9 @@ class Settings(commands.Cog):
     async def settings_rotate_api_key(self, interaction: discord.Interaction):
         """Rotate the API key."""
         try:
-            embed = success_embed(
-                "API Key Rotated", "API key has been successfully rotated."
-            )
-            embed.add_field(
-                name="Previous Key", value="`sk-...abcd` (revoked)", inline=False
-            )
-            embed.add_field(name="New Key", value="`sk-...wxyz` (active)", inline=False)
-            embed.add_field(
-                name="Rotation Time",
-                value=discord.utils.format_dt(discord.utils.utcnow()),
-                inline=False,
+            embed = info_embed(
+                "Not Implemented",
+                "API key rotation is not implemented for this bot.",
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -142,9 +167,7 @@ class Settings(commands.Cog):
                 ephemeral=True,
             )
 
-    @settings_group.command(
-        name="auto-rotate", description="Toggle automatic API key rotation"
-    )
+    @settings_group.command(name="auto-rotate", description="Toggle automatic API key rotation")
     @app_commands.describe(state="Enable or disable auto-rotation")
     @app_commands.choices(
         state=[
@@ -161,22 +184,16 @@ class Settings(commands.Cog):
             enabled = state.value == "on"
             status = "enabled" if enabled else "disabled"
 
-            embed = success_embed(
-                "Settings Updated", f"Auto-rotation has been **{status}**."
-            )
+            embed = success_embed("Settings Updated", f"Auto-rotation has been **{status}**.")
 
             if enabled:
-                embed.add_field(
-                    name="Rotation Interval", value="Every 30 days", inline=False
-                )
+                embed.add_field(name="Rotation Interval", value="Every 30 days", inline=False)
                 embed.add_field(name="Next Rotation", value="In 30 days", inline=False)
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(
-                embed=error_embed(
-                    "Error", f"Failed to update auto-rotate setting: {str(e)}"
-                ),
+                embed=error_embed("Error", f"Failed to update auto-rotate setting: {str(e)}"),
                 ephemeral=True,
             )
 
@@ -197,14 +214,10 @@ class Settings(commands.Cog):
             enabled = state.value == "on"
             status = "enabled" if enabled else "disabled"
 
-            embed = success_embed(
-                "Settings Updated", f"Fallback mode has been **{status}**."
-            )
+            embed = success_embed("Settings Updated", f"Fallback mode has been **{status}**.")
 
             if enabled:
-                embed.add_field(
-                    name="Fallback Provider", value="OpenAI GPT-3.5", inline=False
-                )
+                embed.add_field(name="Fallback Provider", value="OpenAI GPT-3.5", inline=False)
                 embed.add_field(
                     name="Trigger Conditions",
                     value="Primary provider failure, rate limits, timeouts",
@@ -214,11 +227,17 @@ class Settings(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(
-                embed=error_embed(
-                    "Error", f"Failed to update fallback setting: {str(e)}"
-                ),
+                embed=error_embed("Error", f"Failed to update fallback setting: {str(e)}"),
                 ephemeral=True,
             )
+
+    def _format_api_settings(self) -> str:
+        rate_limit = (
+            f"Rate Limit: {Config.RATE_LIMIT_COMMANDS}/min"
+            if Config.RATE_LIMIT_ENABLED
+            else "Rate Limit: Disabled"
+        )
+        return f"```\nAuto-rotate: Not implemented\nFallback: Not implemented\n{rate_limit}\n```"
 
     @settings_view.error
     @settings_model.error
