@@ -6,11 +6,9 @@ The Smart Keyword Routing system provides fast, cost-effective responses by matc
 
 - [Overview](#overview)
 - [How It Works](#how-it-works)
-- [Configuration](#configuration)
 - [Keyword Categories](#keyword-categories)
-- [Creating Keywords](#creating-keywords)
+- [Keyword Management](#keyword-management)
 - [Matching Logic](#matching-logic)
-- [Response Templates](#response-templates)
 - [Analytics](#analytics)
 - [Best Practices](#best-practices)
 
@@ -21,7 +19,7 @@ Smart Keyword Routing is a hybrid support system that:
 1. **Matches keywords** in user messages against a database of common queries
 2. **Returns instant responses** when a match is found (zero AI cost)
 3. **Falls back to AI** for unmatched queries
-4. **Learns from interactions** to improve matching over time
+4. **Tracks analytics** to monitor keyword performance
 
 ### Benefits
 
@@ -56,146 +54,126 @@ Response    (Fallback)
 ### Keyword Processing Pipeline
 
 1. **Preprocessing**
-   - Normalize text (lowercase, remove punctuation)
+   - Normalize text (lowercase)
    - Tokenize into words
-   - Remove stopwords
-   - Stem/lemmatize words
 
 2. **Matching**
    - Exact match
-   - Partial match
+   - Regex pattern match
    - Fuzzy match (typo tolerance)
-   - Semantic similarity
 
 3. **Scoring**
    - Calculate confidence scores
-   - Rank multiple matches
-   - Apply category weights
+   - Sort by priority (higher = more important)
 
 4. **Response Selection**
-   - Select best match
-   - Apply response template
-   - Format for Discord
-
-## Configuration
-
-### Enable Keyword Routing
-
-```bash
-# In .env
-ENABLE_KEYWORD_ROUTING=true
-USE_KEYWORDS_FIRST=true  # Try keywords before AI
-```
-
-### Forum Configuration
-
-```bash
-# Per-forum setting
-/forum setup channel:#support use_keywords_first:true
-```
-
-### Keyword Engine Settings
-
-```bash
-# Sensitivity thresholds
-KEYWORD_MATCH_THRESHOLD=0.7
-KEYWORD_FUZZY_THRESHOLD=0.6
-
-# Response limits
-KEYWORD_MAX_RESPONSES_PER_THREAD=5
-```
+   - Group matches by category
+   - Create Discord embeds
+   - Send response to user
 
 ## Keyword Categories
 
-### Built-in Categories
+The system uses predefined categories to organize keywords:
 
-| Category | Description | Examples |
-|----------|-------------|----------|
-| `FAQ` | Frequently asked questions | Password reset, account issues |
-| `TROUBLESHOOTING` | Common problems and fixes | Connection errors, lag |
-| `HOWTO` | Step-by-step guides | Installation, configuration |
-| `POLICY` | Rules and guidelines | Terms of service, refunds |
-| `ESCALATION` | When to escalate | Human support triggers |
+| Category | Description | Emoji |
+|----------|-------------|-------|
+| `FAQ` | Frequently asked questions | ❓ |
+| `TECHNICAL` | Technical issues and configuration | ⚙️ |
+| `BILLING` | Billing and subscription questions | 💳 |
+| `TROUBLESHOOTING` | Problem diagnosis and solutions | 🔧 |
+| `SUPPORT` | Support requests and help | 🆘 |
+| `GENERAL` | General questions and information | 💬 |
 
-### Custom Categories
+### Category Priority
 
-Create custom categories for your organization:
+Categories are ordered by priority (lower number = higher priority):
 
-```python
-from keywords.categories import CategoryConfig
+1. FAQ
+2. BILLING
+3. TECHNICAL
+4. TROUBLESHOOTING
+5. SUPPORT
+6. GENERAL
 
-# Define custom category
-custom_category = CategoryConfig(
-    name="PRODUCT_FEATURES",
-    description="Questions about product features",
-    priority=5,
-    auto_escalate=False
-)
-```
+## Keyword Management
 
-## Creating Keywords
+Keywords are stored in the database via the `Keyword` and `KeywordEmbedding` models. There is no YAML configuration file or admin commands for keyword management - keywords must be added directly to the database.
 
-### Via Command
+### Database Schema
 
-```bash
-# Add keyword via Discord command
-/keyword add keyword:"password reset" response:"To reset your password..." category:FAQ
+**Keyword Table:**
+- `id`: UUID primary key
+- `guild_id`: Guild this keyword belongs to
+- `pattern`: The keyword/pattern to match (max 500 chars)
+- `category`: Category name (e.g., "faq", "technical")
+- `response_template`: The response text
+- `match_type`: "exact", "contains", "regex", or "semantic"
+- `priority`: Integer priority (higher = more important)
+- `is_active`: Whether the keyword is active
+- `metadata`: JSON metadata
+- `tags`: Array of string tags
 
-# Add with variations
-/keyword add keyword:"forgot password" variations:"can't login, password not working" response:"..."
-```
+**KeywordEmbedding Table:**
+- Stores 1536-dimensional vector embeddings for semantic matching
+- Uses pgvector for efficient similarity search
 
-### Via Configuration File
-
-Create a `keywords.yaml` file:
-
-```yaml
-keywords:
-  - term: "password reset"
-    category: FAQ
-    priority: high
-    responses:
-      - "To reset your password:"
-      - "1. Click 'Forgot Password' on the login page"
-      - "2. Enter your email address"
-      - "3. Check your inbox for the reset link"
-      - "4. Create a new secure password"
-    variations:
-      - "forgot password"
-      - "can't login"
-      - "password not working"
-      - "reset my password"
-    tags:
-      - account
-      - security
-
-  - term: "api rate limit"
-    category: TROUBLESHOOTING
-    priority: medium
-    responses:
-      - "Our API has the following rate limits:"
-      - "• Free tier: 100 requests/minute"
-      - "• Pro tier: 1000 requests/minute"
-      - "• Enterprise: Custom limits"
-    related_keywords:
-      - "throttling"
-      - "429 error"
-```
-
-### Via Database
+### Programmatic Keyword Management
 
 ```python
 from keywords.engine import KeywordEngine
 from database.models import Keyword
+from keywords.categories import Category
 
+# Initialize the engine
 engine = KeywordEngine()
 
-# Add keyword
-engine.add_keyword(
-    term="server status",
-    responses=["Check our status page: https://status.example.com"],
-    category="TROUBLESHOOTING",
-    confidence_threshold=0.8
+# Add a keyword programmatically
+match = engine.add_keyword(
+    keyword="password reset",
+    response="To reset your password:\n1. Click 'Forgot Password' on the login page\n2. Enter your email address\n3. Check your inbox for the reset link",
+    category=Category.FAQ,
+    match_type="exact",
+    priority=10
+)
+
+# Add multiple keywords at once
+keywords = [
+    {
+        "keyword": "api rate limit",
+        "response": "Our API rate limits:\n• Free tier: 100 requests/minute\n• Pro tier: 1000 requests/minute",
+        "category": Category.TECHNICAL,
+        "match_type": "contains",
+        "priority": 5
+    },
+    {
+        "keyword": "^how do I (upgrade|downgrade)",
+        "response": "Plan changes can be made in your account settings under Billing.",
+        "category": Category.BILLING,
+        "match_type": "regex",
+        "priority": 8
+    }
+]
+engine.add_keywords_batch(keywords)
+
+# Remove a keyword
+engine.remove_keyword("password reset", match_type="exact")
+
+# Export all keywords
+keywords_data = engine.export_keywords()
+
+# Import keywords
+engine.import_keywords(keywords_data)
+```
+
+### Engine Configuration
+
+```python
+from keywords.engine import KeywordEngine
+
+engine = KeywordEngine(
+    fuzzy_threshold=0.8,      # Minimum similarity for fuzzy matches
+    max_fuzzy_matches=3,      # Max fuzzy matches to return
+    enable_analytics=True     # Enable cost analytics tracking
 )
 ```
 
@@ -206,9 +184,9 @@ engine.add_keyword(
 | Type | Description | Confidence |
 |------|-------------|------------|
 | Exact | Word-for-word match | 1.0 |
-| Partial | Contains keyword phrase | 0.8-0.9 |
-| Fuzzy | Similar words (typo-tolerant) | 0.6-0.8 |
-| Semantic | Related meaning | 0.5-0.7 |
+| Contains | Keyword phrase found in message | 1.0 |
+| Regex | Pattern match | 0.95 |
+| Fuzzy | Similar words (typo-tolerant) | 0.6-1.0 |
 
 ### Fuzzy Matching
 
@@ -221,160 +199,102 @@ Uses Levenshtein distance for typo tolerance:
 
 Configuration:
 
-```bash
-# Enable fuzzy matching
-KEYWORD_FUZZY_ENABLED=true
-KEYWORD_FUZZY_THRESHOLD=0.6  # Minimum similarity
+```python
+engine = KeywordEngine(fuzzy_threshold=0.8)
 ```
 
-### Semantic Matching
-
-Uses embeddings to match semantically similar queries:
+### Processing Messages
 
 ```python
-# User asks: "How do I change my secret code?"
-# Matches: "password reset" (semantic similarity: 0.82)
+from keywords.engine import KeywordEngine
+
+engine = KeywordEngine()
+
+# Process a user message
+result = engine.process_message(
+    message="How do I reset my password?",
+    include_intent=True  # Also classify intent
+)
+
+# Result contains:
+# - matches: List of KeywordMatch objects
+# - categories: List of matched categories
+# - embeds: List of Discord embeds ready to send
+# - processing_time_ms: Processing time
+# - intent_classification: Intent classification (if enabled)
 ```
 
-Configuration:
-
-```bash
-# Enable semantic matching
-KEYWORD_SEMANTIC_ENABLED=true
-EMBEDDING_PROVIDER=openai
-EMBEDDING_MODEL=text-embedding-3-small
-```
-
-### Multi-Keyword Matching
-
-Supports complex queries with multiple keywords:
+### MatchResult Structure
 
 ```python
-# Query: "password reset not working"
-# Matches:
-# - "password reset" (confidence: 0.9)
-# - "reset not working" (confidence: 0.7)
-# Combines for overall match
-```
-
-## Response Templates
-
-### Basic Templates
-
-```yaml
-responses:
-  - "{{ greeting }}, {{ user_mention }}!"
-  - "{{ response_text }}"
-  - "If you need more help, type /escalate"
-```
-
-### Variables
-
-Available template variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{ user_mention }}` | Mention the user | @username |
-| `{{ user_name }}` | User's display name | John Doe |
-| `{{ guild_name }}` | Server name | My Server |
-| `{{ keyword }}` | Matched keyword | password reset |
-| `{{ confidence }}` | Match confidence | 95% |
-| `{{ response_text }}` | The response content | See below |
-
-### Conditional Responses
-
-```yaml
-responses:
-  - condition: "{{ confidence }} > 0.9"
-    text: "Here's the solution: {{ response_text }}"
-  - condition: "{{ confidence }} < 0.9"
-    text: "You might be asking about: {{ response_text }}\n\nDid this help?"
-```
-
-### Rich Embeds
-
-```yaml
-embed:
-  title: "{{ keyword }}"
-  description: "{{ response_text }}"
-  color: "#00FF00"
-  fields:
-    - name: "Related Articles"
-      value: "{{ related_links }}"
-    - name: "Still Need Help?"
-      value: "React with ❓ to escalate"
+@dataclass
+class MatchResult:
+    message: str                    # Original message
+    matches: List[KeywordMatch]     # All matches found
+    categories: List[Category]      # Categories with matches
+    embeds: List[discord.Embed]     # Generated embeds
+    processing_time_ms: float       # Processing time
+    total_matches: int              # Number of matches
+    intent_classification: Optional[IntentClassification]
 ```
 
 ## Analytics
 
-### Keyword Performance Metrics
+### Cost Analytics
 
-Track keyword effectiveness:
-
-```bash
-# View keyword analytics
-/stats keywords
-
-# Output:
-Keyword Performance (Last 30 Days)
-═══════════════════════════════════
-password reset
-  Uses: 234
-  Positive: 198 (84.6%)
-  Negative: 12 (5.1%)
-  Escalated: 24 (10.3%)
-api rate limit
-  Uses: 156
-  Positive: 142 (91.0%)
-  Negative: 8 (5.1%)
-  Escalated: 6 (3.8%)
-```
-
-### Adding Analytics
+The keyword engine includes analytics tracking via the `CostAnalytics` class:
 
 ```python
-from keywords.analytics import KeywordAnalytics
+from keywords.analytics import CostAnalytics
 
-analytics = KeywordAnalytics()
-
-# Track keyword use
-analytics.track_use(
-    keyword="password reset",
-    user_id="123456",
-    channel_id="789012",
-    confidence=0.92
-)
-
-# Track feedback
-analytics.track_feedback(
-    keyword="password reset",
-    helpful=True,
-    user_id="123456"
-)
+analytics = CostAnalytics(storage_path="analytics_data.json")
 ```
 
-### Optimization Recommendations
+**Note:** Analytics exist in the codebase but there is no admin command (`/stats keywords`) to view them. Analytics data is stored in a JSON file and can be accessed programmatically.
 
-The system provides recommendations:
+### Available Analytics Methods
 
+```python
+from keywords.engine import KeywordEngine
+
+engine = KeywordEngine(enable_analytics=True)
+
+# Get engine stats
+stats = engine.get_stats()
+# Returns:
+# {
+#     "total_keywords": 150,
+#     "exact_keywords": 100,
+#     "regex_patterns": 30,
+#     "fuzzy_keywords": 20,
+#     "categories": {"faq": 45, "technical": 30, ...},
+#     "analytics": {...},
+#     "cost_summary": {...}
+# }
+
+# Access analytics directly
+analytics = engine.analytics
+
+# Get top keywords
+analytics.get_top_keywords(limit=10)
+
+# Get top categories
+analytics.get_top_categories(limit=10)
+
+# Get cost summary
+analytics.get_cost_summary()
+
+# Generate report
+report = analytics.generate_report(days=7)
 ```
-Keyword Optimization Report
-═══════════════════════════
 
-High-Performing Keywords:
-✓ "api rate limit" - 91% positive rate
-✓ "installation guide" - 88% positive rate
+### Analytics Data Tracked
 
-Underperforming Keywords:
-⚠ "billing issue" - 45% escalation rate
-  Suggestion: Add more detailed steps
-  Suggestion: Include refund policy link
-
-Missing Keywords (from AI logs):
-• "mobile app" - mentioned 47 times
-• "two factor authentication" - mentioned 34 times
-• "export data" - mentioned 28 times
-```
+- **Message Processing**: Total messages, response times
+- **Keyword Matches**: Count per keyword, match types
+- **Category Matches**: Count per category
+- **Cost Metrics**: Estimated costs for different operations
+- **Daily Statistics**: Aggregated daily stats
 
 ## Best Practices
 
@@ -382,44 +302,65 @@ Missing Keywords (from AI logs):
 
 1. **Start with FAQs**: Begin with your most common questions
 2. **Use Natural Language**: Write keywords as users would ask
-3. **Include Variations**: Add synonyms and alternate phrasings
-4. **Keep It Current**: Update keywords as products change
+3. **Include Variations**: Use regex patterns or fuzzy matching for alternate phrasings
+4. **Set Priorities**: Higher priority for critical/common keywords
+5. **Keep It Current**: Update keywords as products change
 
 ### Response Writing
 
 1. **Be Concise**: Keep responses under 200 words
-2. **Use Formatting**: Bold important steps, use lists
+2. **Use Formatting**: Use Discord markdown (bold, lists, code blocks)
 3. **Add Links**: Include links to detailed documentation
 4. **Offer Escalation**: Always provide a way to get human help
 
+### Match Type Selection
+
+- **Exact**: Use for specific phrases (e.g., "password reset")
+- **Contains**: Use for keywords that appear anywhere (e.g., "api key")
+- **Regex**: Use for patterns (e.g., "^how do I (upgrade|downgrade)")
+- **Fuzzy**: Use for typo-prone terms (e.g., common misspellings)
+
 ### Maintenance
 
-1. **Review Regularly**: Check analytics monthly
-2. **Remove Unused**: Delete keywords with <5% match rate
-3. **Update Responses**: Keep information accurate
+1. **Monitor Match Rates**: Check analytics to see which keywords are used
+2. **Review Unused**: Consider removing keywords with very low match rates
+3. **Update Responses**: Keep information accurate and up-to-date
 4. **Test Changes**: Verify keywords work after updates
 
 ### Example Workflow
 
-```bash
-# 1. Review AI conversations for common queries
-/admin logs
+```python
+# 1. Review support conversations for common queries
+#    Look for patterns in what users ask
 
-# 2. Identify patterns
-# "How do I..." questions appear frequently
+# 2. Identify high-frequency questions
+#    "How do I..." questions that appear frequently
 
 # 3. Create keywords for common patterns
-/keyword add keyword:"how do I upgrade" category:HOWTO response:"..."
+from keywords.engine import KeywordEngine
+from keywords.categories import Category
+
+engine = KeywordEngine()
+
+engine.add_keyword(
+    keyword="how do I upgrade",
+    response="To upgrade your plan:\n1. Go to Account Settings\n2. Click 'Billing'\n3. Select your new plan\n4. Confirm payment",
+    category=Category.BILLING,
+    match_type="contains",
+    priority=8
+)
 
 # 4. Test the keyword
-/ask how do I upgrade my plan
+result = engine.process_message("how do I upgrade my plan?")
+print(f"Found {result.total_matches} matches")
 
-# 5. Monitor performance
-/stats keywords
+# 5. Monitor performance via analytics
+stats = engine.get_stats()
+print(f"Total keywords: {stats['total_keywords']}")
 
-# 6. Optimize based on feedback
-# If escalation rate is high, improve response
-/keyword edit keyword:"how do I upgrade" response:"Improved explanation..."
+# 6. Optimize based on data
+# If certain keywords never match, review or remove them
+unused = engine.analytics.get_unused_keywords(days=30)
 ```
 
 ## Integration with AI
@@ -427,39 +368,26 @@ Missing Keywords (from AI logs):
 ### Priority Order
 
 ```
-1. Exact Keyword Match (confidence 1.0)
-2. Partial Keyword Match (confidence 0.8+)
-3. Fuzzy Keyword Match (confidence 0.6+)
-4. Semantic Keyword Match (confidence 0.5+)
-5. AI Generation (fallback)
+1. Exact/Contains Match (confidence 1.0)
+2. Regex Match (confidence 0.95)
+3. Fuzzy Match (confidence 0.6+)
+4. AI Generation (fallback)
 ```
 
-### Hybrid Responses
+### Hook System
 
-Combine keywords with AI for enhanced responses:
+The engine supports pre and post-match hooks:
 
 ```python
-# Keyword provides template
-keyword_response = "To reset your password: {steps}"
+# Add pre-match hook
+def before_match(message: str):
+    print(f"Processing: {message}")
 
-# AI fills in details
-ai_enhanced = await ai.complete(
-    f"Fill in these steps: {keyword_response}"
-)
+engine.add_pre_match_hook(before_match)
+
+# Add post-match hook
+def after_match(message: str, matches: List[KeywordMatch]):
+    print(f"Found {len(matches)} matches for: {message}")
+
+engine.add_post_match_hook(after_match)
 ```
-
-### Learning Mode
-
-Enable automatic keyword creation from AI conversations:
-
-```bash
-# In .env
-KEYWORD_LEARNING_MODE=true
-KEYWORD_LEARNING_THRESHOLD=3  # Create after 3 similar queries
-```
-
-When enabled:
-1. Tracks AI responses that get positive feedback
-2. Identifies repeated patterns
-3. Suggests new keywords
-4. Admin approves before adding
