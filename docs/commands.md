@@ -49,7 +49,7 @@ Display help information about bot commands.
 
 ### `/ping`
 
-Check bot latency and status.
+Check bot latency and connection status.
 
 **Usage:**
 ```
@@ -57,11 +57,19 @@ Check bot latency and status.
 ```
 
 **Response:**
+- WebSocket Latency (Discord API)
+- Message Latency (response time)
+- API Latency
+- System CPU and RAM usage
+- Shard information
+
+**Example Response:**
 ```
-🏓 Pong!
-Latency: 45ms
-WebSocket: 32ms
-Uptime: 2 days, 4 hours
+🟢 Pong!
+📡 WebSocket Latency: 45ms
+💬 Message Latency: 52ms
+🌐 API Latency: 45ms
+💻 System: CPU 12.5% | RAM 45.2%
 ```
 
 **Permissions:** Everyone
@@ -90,7 +98,7 @@ Commands for requesting and managing support.
 
 ### `/ask`
 
-Ask a question to the AI support system.
+Ask a question using the knowledge base.
 
 **Usage:**
 ```
@@ -109,10 +117,10 @@ Ask a question to the AI support system.
 ```
 
 **Response:**
-- AI-generated answer
-- Sources used (from knowledge base)
-- Confidence score
-- Response time
+- Top relevant sources from knowledge base
+- Similarity scores for each result
+- Document titles and previews
+- Search execution time
 
 **Permissions:** Everyone
 
@@ -174,6 +182,42 @@ List all knowledge base documents.
 - Document list with IDs
 - Last updated timestamps
 - Document types
+
+**Permissions:** Manage Guild
+
+---
+
+### `/knowledge_upload`
+
+Upload a file to the knowledge base.
+
+**Usage:**
+```
+/knowledge_upload file:<attachment> [title:<document title>]
+```
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| file | Attachment | Yes | File to upload (txt, md, json, py, js, html, css) |
+| title | string | No | Document title (uses filename if not provided) |
+
+**Supported File Types:**
+- `.txt` - Text files
+- `.md` - Markdown files
+- `.json` - JSON files
+- `.py` - Python files
+- `.js` - JavaScript files
+- `.html` - HTML files
+- `.css` - CSS files
+
+**Max File Size:** 1MB
+
+**Examples:**
+```
+/knowledge_upload file:guide.md
+/knowledge_upload file:api-docs.txt title:"API Documentation"
+```
 
 **Permissions:** Manage Guild
 
@@ -289,6 +333,85 @@ Reload a bot cog (for development).
 
 **Permissions:** Administrator
 
+---
+
+### `/disable`
+
+Disable the bot in the current channel.
+
+**Usage:**
+```
+/disable [duration:<duration>]
+```
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| duration | string | No | Duration to disable (e.g., '30m', '2h', '1d'). If not specified, disabled indefinitely. |
+
+**Duration Format:**
+- `30m` or `30 minutes` - 30 minutes
+- `2h` or `2 hours` - 2 hours
+- `1d` or `1 day` - 1 day
+
+**Examples:**
+```
+/disable
+/disable duration:30m
+/disable duration:2h
+```
+
+**Permissions:** Manage Channels
+
+---
+
+### `/enable`
+
+Re-enable the bot in the current channel.
+
+**Usage:**
+```
+/enable
+```
+
+**Permissions:** Manage Channels
+
+---
+
+### `/disable-ai`
+
+Disable AI responses in the current channel (commands still work).
+
+**Usage:**
+```
+/disable-ai
+```
+
+**What gets disabled:**
+- AI-generated responses
+- Smart suggestions
+- Auto-responses
+
+**What still works:**
+- All `/` commands
+- Manual commands
+- Search functionality
+
+**Permissions:** Manage Channels
+
+---
+
+### `/enable-ai`
+
+Re-enable AI responses in the current channel.
+
+**Usage:**
+```
+/enable-ai
+```
+
+**Permissions:** Manage Channels
+
 ## Research Commands
 
 Commands for advanced research and analysis.
@@ -320,11 +443,29 @@ Perform a web search with AI analysis.
 
 ### `/research_status`
 
-Check the status of your research request.
+Check the status of a research task.
 
 **Usage:**
 ```
-/research_status [research_id:<id>]
+/research_status task_id:<task ID>
+```
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| task_id | string | Yes | The task ID to check |
+
+**Status Values:**
+- `⏳ PENDING` - Task is queued
+- `🔄 STARTED` - Task has started
+- `📊 PROGRESS` - Task is in progress (with progress bar)
+- `✅ SUCCESS` - Task completed successfully
+- `❌ FAILURE` - Task failed
+- `🚫 REVOKED` - Task was cancelled
+
+**Examples:**
+```
+/research_status task_id:abc123-def456
 ```
 
 **Permissions:** Everyone
@@ -333,12 +474,18 @@ Check the status of your research request.
 
 ### `/research_queue`
 
-View the research queue status.
+View the current research task queue.
 
 **Usage:**
 ```
 /research_queue
 ```
+
+**Response:**
+- 🔄 Active tasks count
+- ⏳ Scheduled tasks count
+- 📦 Reserved tasks count
+- Your active tasks (up to 5)
 
 **Permissions:** Everyone
 
@@ -346,14 +493,28 @@ View the research queue status.
 
 ### `/research_cancel`
 
-Cancel a pending or in-progress research request.
+Cancel a research task.
 
 **Usage:**
 ```
-/research_cancel research_id:<id>
+/research_cancel task_id:<task ID>
 ```
 
-**Permissions:** Everyone
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| task_id | string | Yes | The task ID to cancel |
+
+**Notes:**
+- You can only cancel your own tasks unless you have Administrator permission
+- Tasks that have already completed cannot be cancelled
+
+**Examples:**
+```
+/research_cancel task_id:abc123-def456
+```
+
+**Permissions:** Everyone (own tasks), Administrator (any task)
 
 ---
 
@@ -363,8 +524,27 @@ Compare multiple items with research.
 
 **Usage:**
 ```
-/research_compare items:<item1,item2> criteria:<criterion1,criterion2>
+/research_compare items:<item1,item2> [criteria:<criterion1,criterion2>]
 ```
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| items | string | Yes | - | Comma-separated list of items to compare |
+| criteria | string | No | price,features,quality | Comma-separated comparison criteria |
+
+**Examples:**
+```
+/research_compare items:"Python,JavaScript,Go"
+/research_compare items:"AWS,GCP,Azure" criteria:"price,performance,features"
+/research_compare items:"React,Vue,Angular" criteria:"learning_curve,performance,ecosystem"
+```
+
+**Response:**
+- Items compared count
+- Rankings with scores
+- Recommendation (best option)
+- Detailed comparison results
 
 **Permissions:** Everyone
 
@@ -391,11 +571,24 @@ Compare multiple items with research.
 | `/knowledge action:search` | ✅ | ✅ | ✅ | ✅ |
 | `/knowledge action:add` | ❌ | ❌ | ✅ | ✅ |
 | `/knowledge action:list` | ❌ | ❌ | ✅ | ✅ |
+| `/knowledge_upload` | ❌ | ❌ | ✅ | ✅ |
 | `/forum setup` | ❌ | ❌ | ❌ | ✅ |
 | `/settings view` | ❌ | ❌ | ❌ | ✅ |
+| `/disable` | ❌ | ❌ | ✅* | ✅ |
+| `/enable` | ❌ | ❌ | ✅* | ✅ |
+| `/disable-ai` | ❌ | ❌ | ✅* | ✅ |
+| `/enable-ai` | ❌ | ❌ | ✅* | ✅ |
 | `/admin maintenance` | ❌ | ❌ | ❌ | ✅ |
 | `/admin system` | ❌ | ❌ | ❌ | ✅ |
 | `/admin reload` | ❌ | ❌ | ❌ | ✅ |
+| `/research` | ✅ | ✅ | ✅ | ✅ |
+| `/research_status` | ✅ | ✅ | ✅ | ✅ |
+| `/research_queue` | ✅ | ✅ | ✅ | ✅ |
+| `/research_cancel` | ✅** | ✅** | ✅** | ✅ |
+| `/research_compare` | ✅ | ✅ | ✅ | ✅ |
+
+\* Requires Manage Channels permission
+\** Can only cancel own tasks (Administrators can cancel any task)
 
 ## Command Usage Tips
 
