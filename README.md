@@ -656,9 +656,8 @@ furnished to do so, subject to the following conditions:
 
 ## 💬 Support
 
-- 🎮 **Discord**: [Join our support server](https://discord.gg/yourserver)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourorg/discord-support-bot/issues)
-- 📧 **Email**: support@yourcompany.com
+- 🐛 **Issues**: [GitHub Issues]([https://github.com/yourorg/discord-support-bot/issues](https://github.com/ru3tyYT/Revolution-Support/issues))
+- 📧 **Email**: revolutionmacro@gmail.com
 
 ---
 
