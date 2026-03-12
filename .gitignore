@@ -350,7 +350,7 @@ transcripts/
 backups/
 
 # AI/ML models
-models/
+/models/
 *.pt
 *.pth
 *.h5
