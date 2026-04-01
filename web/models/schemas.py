@@ -1,6 +1,7 @@
 """Pydantic schemas for API requests/responses."""
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 # Token schemas
@@ -91,5 +92,5 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     confidence: float
-    sources: List[str] = []
+    sources: List[str] = Field(default_factory=list)
     response_type: str  # keyword_match, semantic_search, knowledge_base, ai_fallback
