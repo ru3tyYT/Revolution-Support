@@ -335,6 +335,19 @@ MAX_DAILY_COST=10.00
 python -m bot
 ```
 
+### Web API (FastAPI)
+
+The repository includes a FastAPI app for the dashboard and OAuth (`web/`). From the project root, with `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `SECRET_KEY` (32+ characters), and `DISCORD_REDIRECT_URI` set in `.env`:
+
+```bash
+uvicorn web.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- Interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Discord login (redirect): [http://localhost:8000/api/auth/login](http://localhost:8000/api/auth/login)
+
+See [Environment Variables](docs/configuration/environment-variables.md#web-server--discord-oauth) and [Getting Started](docs/getting-started.md#optional-web-api-fastapi) for OAuth setup (redirect URI and scopes: `identify`, `guilds`, `guilds.members.read`).
+
 ---
 
 ## 🎮 Command Overview
