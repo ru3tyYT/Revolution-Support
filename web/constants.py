@@ -8,8 +8,8 @@ DISCORD_SCOPES = {
     "email": "View your email (if verified)",
 }
 
-# Required scopes for this app
-REQUIRED_DISCORD_SCOPES = ["identify", "guilds"]
+# Required scopes for this app (guilds.members.read: GET /users/@me/guilds/{id}/member)
+REQUIRED_DISCORD_SCOPES = ["identify", "guilds", "guilds.members.read"]
 
 # Token type
 TOKEN_TYPE = "bearer"
