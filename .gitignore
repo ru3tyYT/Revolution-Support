@@ -470,3 +470,7 @@ ehthumbs.db
 [Tt]humbs.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
+
+# Local implementation plans (not tracked)
+PLAN_*.md
+PLANS_SUMMARY.md
