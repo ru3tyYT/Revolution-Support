@@ -13,6 +13,7 @@ Complete reference for environment variables used by the Discord Support Bot.
 - [Clustering (Optional)](#clustering-optional)
 - [Rate Limiting](#rate-limiting)
 - [Monitoring & Logging](#monitoring--logging)
+- [Web Server & Discord OAuth](#web-server--discord-oauth)
 
 ## Required Variables
 
@@ -214,6 +215,34 @@ DEBUG=false
 
 STATUS_WEBHOOK=https://discord.com/api/webhooks/...
 ERROR_WEBHOOK=https://discord.com/api/webhooks/...
+```
+
+## Web Server & Discord OAuth
+
+Used by the FastAPI app in `web/` for the dashboard and Discord OAuth2 login. Set these when you run `uvicorn web.main:app` (see [Getting Started](../getting-started.md#optional-web-api-fastapi)).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEB_HOST` | `0.0.0.0` | Bind address for Uvicorn |
+| `WEB_PORT` | `8000` | Port (pass to Uvicorn; not read automatically by FastAPI) |
+| `FRONTEND_URL` | `http://localhost:5173` | Allowed CORS origin and OAuth redirect target for the SPA |
+| `DISCORD_CLIENT_ID` | - | OAuth2 application Client ID from the [Discord Developer Portal](https://discord.com/developers/applications) |
+| `DISCORD_CLIENT_SECRET` | - | OAuth2 Client Secret |
+| `DISCORD_REDIRECT_URI` | `http://localhost:8000/api/auth/callback` | Must match **exactly** an entry under OAuth2 → Redirects in the Developer Portal |
+| `SECRET_KEY` | - | JWT signing secret; use at least 32 characters (e.g. `python -c "import secrets; print(secrets.token_hex(32))"`) |
+| `ADMIN_GUILD_IDS` | - | Comma-separated guild IDs where admin checks apply (user must have Administrator in that guild) |
+
+OAuth scopes requested by the backend include `identify`, `guilds`, and `guilds.members.read` (required for per-guild member permission checks).
+
+```bash
+WEB_HOST=0.0.0.0
+WEB_PORT=8000
+FRONTEND_URL=http://localhost:5173
+DISCORD_CLIENT_ID=your_application_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
+DISCORD_REDIRECT_URI=http://localhost:8000/api/auth/callback
+SECRET_KEY=your_32_character_minimum_secret_key
+ADMIN_GUILD_IDS=123456789012345678,987654321098765432
 ```
 
 ## Environment-Specific Examples
