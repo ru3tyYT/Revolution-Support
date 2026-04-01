@@ -146,6 +146,21 @@ python -m bot --dev
 python -m bot
 ```
 
+### Optional: Web API (FastAPI)
+
+The project includes a FastAPI layer under `web/` for dashboard APIs and Discord OAuth. It is separate from the Discord bot process.
+
+1. Install Python dependencies (includes FastAPI, Uvicorn, `python-jose`, `httpx`; see `requirements.txt`).
+2. In `.env`, set `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI` (must match the Developer Portal), `SECRET_KEY` (32+ characters), and optionally `FRONTEND_URL`, `ADMIN_GUILD_IDS`. See [Web Server & Discord OAuth](configuration/environment-variables.md#web-server--discord-oauth).
+3. In the [Discord Developer Portal](https://discord.com/developers/applications) → OAuth2 → Redirects, add `http://localhost:8000/api/auth/callback` (or your deployed callback URL).
+4. From the **repository root**:
+
+```bash
+uvicorn web.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+5. Open [http://localhost:8000/docs](http://localhost:8000/docs) for OpenAPI. Visit [http://localhost:8000/api/auth/login](http://localhost:8000/api/auth/login) to start the OAuth flow; after authorization, the browser is redirected to `{FRONTEND_URL}/auth/callback` with a `token` query parameter. Call protected routes with `Authorization: Bearer <token>`.
+
 ### Docker Installation
 
 Docker provides an easier way to get started with all dependencies included.
