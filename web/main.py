@@ -1,22 +1,28 @@
 """FastAPI application entry point."""
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from .config import get_web_config
-from .constants import API_PREFIX
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Import routers (will be created in PLAN_03)
-# from .routers import auth, ai, knowledge, analytics, guilds, tickets
+from .config import get_web_config
+from .constants import API_PREFIX, AUTH_PREFIX
+from .routers import (
+    ai_router,
+    analytics_router,
+    auth_router,
+    guilds_router,
+    knowledge_router,
+    tickets_router,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup
     config = get_web_config()
     config.validate()
     yield
-    # Shutdown
+
 
 app = FastAPI(
     title="Discord Support Bot API",
@@ -25,7 +31,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
 config = get_web_config()
 app.add_middleware(
     CORSMiddleware,
@@ -35,15 +40,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers (will be added in PLAN_03)
-# app.include_router(auth.router, prefix=AUTH_PREFIX, tags=["auth"])
-# app.include_router(ai.router, prefix=API_PREFIX, tags=["ai"])
-# etc.
+app.include_router(auth_router, prefix=AUTH_PREFIX, tags=["Authentication"])
+app.include_router(ai_router, prefix=f"{API_PREFIX}/ai", tags=["ai"])
+app.include_router(knowledge_router, prefix=f"{API_PREFIX}/knowledge", tags=["knowledge"])
+app.include_router(analytics_router, prefix=f"{API_PREFIX}/analytics", tags=["analytics"])
+app.include_router(guilds_router, prefix=f"{API_PREFIX}/guilds", tags=["guilds"])
+app.include_router(tickets_router, prefix=f"{API_PREFIX}/tickets", tags=["tickets"])
+
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
 
 @app.get("/")
 async def root():
@@ -51,5 +60,5 @@ async def root():
     return {
         "name": "Discord Support Bot API",
         "version": "1.0.0",
-        "docs": "/docs"
+        "docs": "/docs",
     }
