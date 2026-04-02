@@ -13,6 +13,7 @@ from database.models import Conversation
 from web.dependencies import get_current_user
 from web.exceptions import ForbiddenException, NotFoundException
 from web.models.schemas import TicketResponse
+from web.services.guild_context import ensure_admin_for_discord_guild
 
 router = APIRouter()
 
@@ -77,8 +78,10 @@ async def get_ticket(
         ).scalar_one_or_none()
         if not c:
             raise NotFoundException("Ticket not found")
-        if c.user_id != discord_id and not current_user.get("is_admin"):
-            raise ForbiddenException("Not authorized")
+        if c.user_id != discord_id:
+            if not c.guild:
+                raise ForbiddenException("Not authorized")
+            ensure_admin_for_discord_guild(current_user, c.guild.discord_id)
         full = TicketResponse(
             id=str(c.id),
             user_id=c.user_id,
