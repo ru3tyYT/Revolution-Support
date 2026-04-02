@@ -14,6 +14,7 @@ Complete reference for environment variables used by the Discord Support Bot.
 - [Rate Limiting](#rate-limiting)
 - [Monitoring & Logging](#monitoring--logging)
 - [Web Server & Discord OAuth](#web-server--discord-oauth)
+- [Dashboard frontend (Vite)](#dashboard-frontend-vite)
 
 ## Required Variables
 
@@ -243,6 +244,25 @@ DISCORD_CLIENT_SECRET=your_client_secret
 DISCORD_REDIRECT_URI=http://localhost:8000/api/auth/callback
 SECRET_KEY=your_32_character_minimum_secret_key
 ADMIN_GUILD_IDS=123456789012345678,987654321098765432
+```
+
+### ORM note (contributors)
+
+Several models persist a JSONB column named `metadata` in PostgreSQL. On the SQLAlchemy models, the Python attribute is **`json_metadata`** so it does not clash with Declarative’s reserved `metadata` (table registry). Queries should use `Model.json_metadata`, not `Model.metadata`.
+
+## Dashboard frontend (Vite)
+
+Used only by the React app in `frontend/` at build and dev time. Copy [`frontend/.env.example`](../../frontend/.env.example) to `frontend/.env` and adjust as needed.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_URL` | `http://localhost:8000` | Base URL of the FastAPI backend (no trailing slash). The SPA calls paths such as `/api/auth/me` relative to this origin. |
+
+In production, set `VITE_API_URL` to your public API URL before `npm run build`. Ensure the backend `FRONTEND_URL` (CORS + OAuth redirect) matches the URL where you host the built SPA.
+
+```bash
+# frontend/.env
+VITE_API_URL=http://localhost:8000
 ```
 
 ## Environment-Specific Examples
