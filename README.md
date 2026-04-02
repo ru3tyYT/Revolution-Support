@@ -337,7 +337,7 @@ python -m bot
 
 ### Web API (FastAPI)
 
-The repository includes a FastAPI app for the dashboard and OAuth (`web/`). From the project root, with `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `SECRET_KEY` (32+ characters), and `DISCORD_REDIRECT_URI` set in `.env`:
+The repository includes a FastAPI app for the dashboard and Discord OAuth (`web/`). From the project root, with `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `SECRET_KEY` (32+ characters), and `DISCORD_REDIRECT_URI` set in `.env`:
 
 ```bash
 uvicorn web.main:app --reload --host 0.0.0.0 --port 8000
@@ -345,8 +345,20 @@ uvicorn web.main:app --reload --host 0.0.0.0 --port 8000
 
 - Interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Discord login (redirect): [http://localhost:8000/api/auth/login](http://localhost:8000/api/auth/login)
+- **REST API** (authenticated unless noted): `/api/knowledge/*`, `/api/analytics/*`, `/api/ai/ask`, `/api/guilds`, `/api/tickets` — see [PLAN_03_API_Endpoints.md](PLAN_03_API_Endpoints.md) (implemented route map at the bottom).
 
-See [Environment Variables](docs/configuration/environment-variables.md#web-server--discord-oauth) and [Getting Started](docs/getting-started.md#optional-web-api-fastapi) for OAuth setup (redirect URI and scopes: `identify`, `guilds`, `guilds.members.read`).
+### Dashboard frontend (React)
+
+The Vite + React SPA lives in `frontend/`. It uses the same OAuth callback flow (`{FRONTEND_URL}/auth/callback?token=...`) and calls the API using `VITE_API_URL` (default `http://localhost:8000`).
+
+```bash
+cd frontend
+cp .env.example .env   # optional: set VITE_API_URL
+npm install
+npm run dev            # http://localhost:5173
+```
+
+See [Getting Started](docs/getting-started.md#optional-dashboard-frontend-react--vite) and [Environment Variables](docs/configuration/environment-variables.md#dashboard-frontend-vite).
 
 ---
 
