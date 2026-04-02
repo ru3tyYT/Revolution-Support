@@ -4,8 +4,9 @@ Provides document retrieval, context assembly, and re-ranking for AI responses.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
+from uuid import UUID
 import numpy as np
 
 from sqlalchemy.orm import Session
@@ -79,7 +80,7 @@ class RAGSystem:
     async def retrieve(
         self,
         query: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: Optional[int] = None,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[SearchResult]:
@@ -120,7 +121,7 @@ class RAGSystem:
                     content=chunk.content,
                     similarity=similarity,
                     chunk_index=chunk.chunk_index,
-                    metadata=doc.metadata or {},
+                    metadata=doc.json_metadata or {},
                 )
             )
 
@@ -187,7 +188,7 @@ class RAGSystem:
     async def assemble_context(
         self,
         query: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: Optional[int] = None,
     ) -> RAGContext:
         """Assemble context for AI prompts.
@@ -308,7 +309,7 @@ Answer:"""
     async def query(
         self,
         query: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         ai_router: Optional[Any] = None,
         system_prompt: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -359,7 +360,7 @@ Answer:"""
     def get_related_documents(
         self,
         document_id: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
         """Find documents related to a given document.
