@@ -111,8 +111,8 @@ class Keyword(Base, TimestampMixin, SoftDeleteMixin):
     priority = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
-    # Metadata
-    metadata = Column(JSONB, default=dict, nullable=False)
+    # Metadata (DB column `metadata`; Python name avoids Declarative reserved `metadata`)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
     tags = Column(ARRAY(String), default=list, nullable=False)
 
     # Relationships
@@ -198,8 +198,7 @@ class KnowledgeDoc(Base, TimestampMixin, SoftDeleteMixin):
     is_processed = Column(Boolean, default=False, nullable=False)
     processed_at = Column(DateTime, nullable=True)
 
-    # Metadata
-    metadata = Column(JSONB, default=dict, nullable=False)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
 
     # Relationships
     guild = relationship("Guild", back_populates="knowledge_docs")
@@ -238,9 +237,8 @@ class KnowledgeChunk(Base, TimestampMixin):
     embedding = Column(Vector(1536), nullable=False)
     model = Column(String(100), default="text-embedding-ada-002", nullable=False)
 
-    # Metadata
     token_count = Column(Integer, nullable=True)
-    metadata = Column(JSONB, default=dict, nullable=False)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
 
     # Relationships
     document = relationship("KnowledgeDoc", back_populates="chunks")
@@ -292,8 +290,7 @@ class Conversation(Base, TimestampMixin):
     last_activity_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     message_count = Column(Integer, default=0, nullable=False)
 
-    # Metadata
-    metadata = Column(JSONB, default=dict, nullable=False)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
 
     # Relationships
     guild = relationship("Guild", back_populates="conversations")
@@ -357,8 +354,7 @@ class QueryAnalytics(Base, TimestampMixin):
     channel_id = Column(String(20), nullable=True)
     user_id = Column(String(20), nullable=True)
 
-    # Metadata
-    metadata = Column(JSONB, default=dict, nullable=False)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
 
     # Relationships
     guild = relationship("Guild", back_populates="analytics")
@@ -408,8 +404,7 @@ class APIKey(Base, TimestampMixin):
     # Rate limiting
     rate_limit_per_minute = Column(Integer, nullable=True)
 
-    # Metadata
-    metadata = Column(JSONB, default=dict, nullable=False)
+    json_metadata = Column("metadata", JSONB, default=dict, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("service_name", "key_name", name="uq_api_key_service_name"),
