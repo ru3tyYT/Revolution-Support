@@ -86,3 +86,48 @@ def test_me_with_valid_token(client, sample_user):
     data = r.json()
     assert data["discord_id"] == sample_user["id"]
     assert data["username"] == sample_user["username"]
+
+
+def test_knowledge_documents_requires_auth(client):
+    r = client.get("/api/knowledge/documents")
+    assert r.status_code == 401
+
+
+def test_knowledge_documents_requires_admin(client, sample_user):
+    from web.services.auth_service import AuthService
+
+    token, _ = AuthService().create_access_token(sample_user)
+    r = client.get(
+        "/api/knowledge/documents",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 403
+
+
+def test_analytics_summary_requires_admin(client, sample_user):
+    from web.services.auth_service import AuthService
+
+    token, _ = AuthService().create_access_token(sample_user)
+    r = client.get(
+        "/api/analytics/summary",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 403
+
+
+def test_ai_ask_requires_auth(client):
+    r = client.post("/api/ai/ask", json={"question": "hello there"})
+    assert r.status_code == 401
+
+
+def test_tickets_requires_auth(client):
+    r = client.get("/api/tickets")
+    assert r.status_code == 401
+
+
+def test_guilds_list_requires_admin(client, sample_user):
+    from web.services.auth_service import AuthService
+
+    token, _ = AuthService().create_access_token(sample_user)
+    r = client.get("/api/guilds", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 403
