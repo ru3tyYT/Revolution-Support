@@ -4,8 +4,9 @@ Provides full-text search, vector similarity search, and hybrid search.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Union
 from enum import Enum
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, or_, and_
@@ -65,7 +66,7 @@ class KnowledgeSearch:
     def vector_search(
         self,
         query_embedding: List[float],
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: int = 5,
         similarity_threshold: float = 0.7,
         filters: Optional[Dict[str, Any]] = None,
@@ -96,7 +97,7 @@ class KnowledgeSearch:
             .join(KnowledgeDoc, KnowledgeChunk.document_id == KnowledgeDoc.id)
             .filter(
                 KnowledgeDoc.guild_id == guild_id,
-                KnowledgeDoc.is_active == True,
+                KnowledgeDoc.is_deleted == False,
             )
         )
 
@@ -117,7 +118,7 @@ class KnowledgeSearch:
             if "tags" in filters:
                 for tag in filters["tags"]:
                     query = query.filter(
-                        KnowledgeDoc.metadata.contains({"tags": [tag]})
+                        KnowledgeDoc.json_metadata.contains({"tags": [tag]})
                     )
 
         # Order by similarity and limit
@@ -132,7 +133,7 @@ class KnowledgeSearch:
     def fulltext_search(
         self,
         query: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: int = 5,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[Tuple[KnowledgeChunk, KnowledgeDoc, float]]:
@@ -156,7 +157,7 @@ class KnowledgeSearch:
             .join(KnowledgeDoc, KnowledgeChunk.document_id == KnowledgeDoc.id)
             .filter(
                 KnowledgeDoc.guild_id == guild_id,
-                KnowledgeDoc.is_active == True,
+                KnowledgeDoc.is_deleted == False,
             )
         )
 
@@ -232,7 +233,7 @@ class KnowledgeSearch:
         self,
         query: str,
         query_embedding: List[float],
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: int = 5,
         vector_weight: float = 0.7,
         text_weight: float = 0.3,
@@ -310,7 +311,7 @@ class KnowledgeSearch:
         self,
         query_embedding: Optional[List[float]] = None,
         query_text: Optional[str] = None,
-        guild_id: Optional[int] = None,
+        guild_id: Optional[Union[UUID, str]] = None,
         top_k: int = 5,
         similarity_threshold: float = 0.7,
         search_type: SearchType = SearchType.VECTOR,
@@ -373,7 +374,7 @@ class KnowledgeSearch:
     def search_documents(
         self,
         query: str,
-        guild_id: int,
+        guild_id: Union[UUID, str],
         top_k: int = 5,
     ) -> List[KnowledgeDoc]:
         """Search for documents by title.
@@ -392,7 +393,7 @@ class KnowledgeSearch:
             self.db.query(KnowledgeDoc)
             .filter(
                 KnowledgeDoc.guild_id == guild_id,
-                KnowledgeDoc.is_active == True,
+                KnowledgeDoc.is_deleted == False,
                 func.lower(KnowledgeDoc.title).contains(query_lower),
             )
             .limit(top_k)
