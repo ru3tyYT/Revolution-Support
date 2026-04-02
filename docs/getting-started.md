@@ -10,6 +10,7 @@ This guide will walk you through setting up the Discord Support Bot from scratch
   - [Docker Installation](#docker-installation)
 - [First-Time Configuration](#first-time-configuration)
 - [Initial Setup Wizard](#initial-setup-wizard)
+- [Optional: Dashboard frontend (React + Vite)](#optional-dashboard-frontend-react--vite)
 - [Next Steps](#next-steps)
 
 ## Prerequisites
@@ -160,6 +161,25 @@ uvicorn web.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 5. Open [http://localhost:8000/docs](http://localhost:8000/docs) for OpenAPI. Visit [http://localhost:8000/api/auth/login](http://localhost:8000/api/auth/login) to start the OAuth flow; after authorization, the browser is redirected to `{FRONTEND_URL}/auth/callback` with a `token` query parameter. Call protected routes with `Authorization: Bearer <token>`.
+
+### Optional: Dashboard frontend (React + Vite)
+
+The `frontend/` directory is a React (TypeScript) SPA for the support dashboard: Discord login, token handoff on `/auth/callback`, and placeholder routes for `/admin` and `/portal` (full UI is expanded in later plans).
+
+1. **Backend** must be running (Uvicorn as above) with `FRONTEND_URL` matching the dev server origin (default `http://localhost:5173`) so CORS and OAuth redirects work.
+2. From `frontend/`:
+
+```bash
+cd frontend
+cp .env.example .env
+# Edit .env if the API is not at http://localhost:8000
+npm install
+npm run dev
+```
+
+3. Open [http://localhost:5173](http://localhost:5173), click **Login with Discord**, complete OAuth; you should land on `/auth/callback` and then `/admin` or `/portal` depending on admin status.
+
+See [Dashboard frontend (Vite)](configuration/environment-variables.md#dashboard-frontend-vite) for `VITE_API_URL`. API route reference: [PLAN_03_API_Endpoints.md](../PLAN_03_API_Endpoints.md#implemented-api-paths-reference).
 
 ### Docker Installation
 
