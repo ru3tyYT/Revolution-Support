@@ -71,8 +71,10 @@ The Discord Support Bot is an intelligent, cost-optimized support bot that lever
 - [AI Models](configuration/ai-models.md) - Supported models and providers
 - [Cost Optimization](configuration/cost-optimization.md) - Budget management strategies
 
-### Web API
-- FastAPI app: `web.main:app` — run with Uvicorn from the project root (see [Getting Started](getting-started.md#optional-web-api-fastapi)); interactive docs at `/docs`; Discord OAuth login at `/api/auth/login`.
+### Web API & dashboard
+- **FastAPI** (`web.main:app`): run with Uvicorn from the project root ([Getting Started](getting-started.md#optional-web-api-fastapi)); OpenAPI at `/docs`; Discord OAuth at `/api/auth/login`.
+- **REST endpoints**: knowledge, analytics, AI ask (`POST /api/ai/ask`), guilds, tickets — see [PLAN_03_API_Endpoints.md](../PLAN_03_API_Endpoints.md#implemented-api-paths-reference).
+- **React dashboard** (`frontend/`): Vite SPA with login, OAuth callback, and placeholder admin/user areas ([Getting Started](getting-started.md#optional-dashboard-frontend-react--vite)); configure `VITE_API_URL` ([Environment Variables](configuration/environment-variables.md#dashboard-frontend-vite)).
 
 ### Deployment
 - [Docker Deployment](deployment/docker.md) - Container-based deployment
