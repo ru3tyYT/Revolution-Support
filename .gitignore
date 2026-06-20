@@ -471,6 +471,8 @@ ehthumbs.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
 
-# Local implementation plans (not tracked)
-PLAN_*.md
-PLANS_SUMMARY.md
+# Local implementation plans — never commit (any directory; case variants for macOS/Windows)
+**/PLAN_*.md
+**/PLANS_SUMMARY.md
+**/plan_*.md
+**/plans_summary.md
